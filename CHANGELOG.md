@@ -5,7 +5,7 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本控制](https://semver.org/lang/zh-CN/)。
 
-## [未发布]
+## [1.1.0] - 2026-05-13
 
 ### 新增
 - `check-session [topic]` 命令：检测未记录的模块测试，防止 AI 遗忘导致等级不更新
