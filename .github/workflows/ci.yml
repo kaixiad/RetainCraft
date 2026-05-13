@@ -21,6 +21,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - name: Install dependencies
+        run: pip install pytest
+
       - name: Run tests
         run: cd scripts && python -m pytest test_srs.py -v
 
