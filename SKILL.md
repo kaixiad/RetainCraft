@@ -9,7 +9,7 @@ description: >
 version: 1.1.0
 author: kaixiad
 license: MIT
-homepage: https://github.com/kaixiad/retaincraft
+homepage: https://github.com/kaixiad/RetainCraft
 tags:
   - learning
   - education
