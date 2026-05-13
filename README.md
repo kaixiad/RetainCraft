@@ -37,7 +37,7 @@ Not "here's some material, figure it out yourself" — your AI studies with you,
 openclaw skills install retaincraft
 
 # Manual
-git clone https://github.com/kaixiad/retaincraft.git ~/.openclaw/workspace/skills/retaincraft
+git clone https://github.com/kaixiad/RetainCraft.git ~/.openclaw/workspace/skills/retaincraft
 ```
 
 ## Usage
@@ -68,6 +68,8 @@ retaincraft/
     ├── srs.py                  # SM-2 spaced repetition engine + level system
     ├── test_srs.py             # Unit tests (127 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
+    ├── evidence.md             # Academic citations and effect sizes
+    ├── templates.md            # Output format templates
     ├── evidence.md             # Academic citations and effect sizes
     └── templates.md            # Output format templates
 ```
