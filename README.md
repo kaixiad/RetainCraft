@@ -1,7 +1,8 @@
 # 🧠 RetainCraft
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 > Evidence-based AI-assisted interactive learning protocol for OpenClaw
-> 基于循证学习科学的 AI 辅助互动学习协议
 >
 > *Previously known as "interactive-learning"*
 
@@ -54,10 +55,12 @@ The AI will automatically start the full learning workflow.
 ```
 retaincraft/
 ├── SKILL.md                    # Main file (execution checklist + workflow)
-├── README.md                   # This file
+├── README.md                   # English readme
+├── README.zh-CN.md             # Chinese readme
 ├── LICENSE                     # MIT License
 ├── CHANGELOG.md                # Version history
 ├── CONTRIBUTING.md             # Contribution guide
+├── requirements.txt            # Python version requirement
 ├── .github/
 │   ├── workflows/ci.yml        # GitHub Actions CI/CD
 │   ├── ISSUE_TEMPLATE/         # Issue templates
@@ -68,8 +71,6 @@ retaincraft/
     ├── srs.py                  # SM-2 spaced repetition engine + level system
     ├── test_srs.py             # Unit tests (127 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
-    ├── evidence.md             # Academic citations and effect sizes
-    ├── templates.md            # Output format templates
     ├── evidence.md             # Academic citations and effect sizes
     └── templates.md            # Output format templates
 ```
