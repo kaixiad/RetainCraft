@@ -6,7 +6,7 @@
 
 ### 报告问题
 
-1. 使用 [GitHub Issues](https://github.com/kaixiad/retaincraft/issues) 报告 bug
+1. 使用 [GitHub Issues](https://github.com/kaixiad/RetainCraft/issues) 报告 bug
 2. 提供详细的问题描述、复现步骤和环境信息
 3. 包含相关的错误日志或截图
 
@@ -41,7 +41,7 @@ refactor: 重构SM-2算法实现
 
 1. 克隆仓库：
 ```bash
-git clone https://github.com/kaixiad/retaincraft.git
+git clone https://github.com/kaixiad/RetainCraft.git
 cd retaincraft
 ```
 
