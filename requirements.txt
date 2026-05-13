@@ -1,0 +1,17 @@
+# RetainCraft - Python Dependencies
+# No external dependencies required - uses only Python standard library
+
+# Python version requirement
+python>=3.10
+
+# Standard library modules used:
+# - json (data storage)
+# - os (file operations)
+# - sys (CLI arguments)
+# - datetime (date calculations)
+# - pathlib (path handling)
+# - tempfile (testing)
+# - unittest (testing)
+
+# Note: This project intentionally uses only Python standard library
+# to ensure maximum compatibility and minimal installation requirements.
