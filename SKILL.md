@@ -57,9 +57,12 @@ Evidence-based AI-assisted interactive learning protocol
 
 > Combines 5 scientifically validated methods + self-assessment + diagnostic test + customized learning path
 > 结合 5 种科学验证方法 + 自我评价 + 摸底考试 + 定制化学习路径
->
-> 📖 **Detailed workflow**: [references/full-workflow.md](references/full-workflow.md)
-> **详细流程说明**: [references/full-workflow.md](references/full-workflow.md)
+
+**📦 Source Code (源码)**: [https://github.com/kaixiad/RetainCraft](https://github.com/kaixiad/RetainCraft)
+**📖 Detailed workflow (详细流程)**: [references/full-workflow.md](references/full-workflow.md)
+
+> ⭐ If this skill helps you, please give a Star on GitHub!
+> 如果这个 skill 对你有帮助，欢迎在 GitHub 上给个 Star！
 
 ---
 
