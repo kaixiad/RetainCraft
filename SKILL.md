@@ -52,216 +52,248 @@ metadata:
 
 # RetainCraft
 
-> 基于循证学习科学的 AI 辅助互动学习协议
+Evidence-based AI-assisted interactive learning protocol
+基于循证学习科学的 AI 辅助互动学习协议
+
+> Combines 5 scientifically validated methods + self-assessment + diagnostic test + customized learning path
 > 结合 5 种科学验证方法 + 自我评价 + 摸底考试 + 定制化学习路径
 >
-> 📖 **详细流程说明**: [references/full-workflow.md](references/full-workflow.md)
+> 📖 **Detailed workflow**: [references/full-workflow.md](references/full-workflow.md)
+> **详细流程说明**: [references/full-workflow.md](references/full-workflow.md)
 
 ---
 
-## ⚠️ 执行清单(每次学习开始前必须读)
+## ⚠️ Execution Checklist (执行清单)
 
-### 关键执行步骤(不可违反)
+**Must read before each learning session (每次学习开始前必须读)**
 
-1. **模块测试结束后必须执行**:
+### Critical Steps (关键执行步骤 - 不可违反)
+
+1. **Must execute after module test (模块测试结束后必须执行)**:
    ```bash
    python3 scripts/srs.py record-test <topic> <total> <correct>
    ```
-   不执行此命令 = 模块测试无效,等级不更新。
+   Not executing = module test invalid, level not updated.
+   不执行此命令 = 模块测试无效，等级不更新。
 
-2. **费曼检验(L5 必需)**:
-   - L5 精通需要:连续 2 次模块测试答对率 >=90% + 费曼检验通过
-   - 费曼检验:AI助手扮演"不懂的学生",追问 3 个问题
-   - 用户全部答对 → L5 确认
-   - 用户答错 → L4 保持
-   > **注**:费曼检验是 AI 助手执行的附加验证流程,不在 srs.py 代码中强制执行。
+2. **Feynman Check - L5 required (费曼检验 - L5 必需)**:
+   - L5 mastery requires: 2 consecutive module tests >=90% + Feynman check passed
+   - L5 精通需要：连续 2 次模块测试答对率 >=90% + 费曼检验通过
+   - AI plays "confused student", asks 3 questions
+   - AI 助手扮演"不懂的学生"，追问 3 个问题
 
-3. **评分纪律(不可违反)**:
-   - 评分标准在测试开始前公布,测试过程中不可修改
-   - 单题得分 >= 7 分 → 算"答对"
-   - 不可因用户质疑而改分
+3. **Scoring Discipline (评分纪律 - 不可违反)**:
+   - Scoring criteria announced before test, cannot change during test
+   - 评分标准在测试开始前公布，测试过程中不可修改
+   - Single question score >=7 = "correct"
+   - 单题得分 >=7 分 = 算"答对"
 
-4. **逐级升级限制**:
-   - 等级只能逐级升级,不能跳级
+4. **Level-up Restrictions (逐级升级限制)**:
+   - Levels can only increase one at a time, no skipping
+   - 等级只能逐级升级，不能跳级
+   - Each upgrade requires 2 consecutive passes
    - 每次升级需要连续 2 次达标
 
 ---
 
-## 📚 核心方法论(循证)
+## 📚 Core Methodology (核心方法论 - 循证)
 
-| 方法 | 效果量 | 来源 |
-|------|--------|------|
-| 间隔重复 | d=0.85 | Donoghue & Hattie 2021 元分析 |
-| 主动回忆 | d=0.74 | Donoghue & Hattie 2021 元分析 |
-| 交错练习 | d=0.47 | Donoghue & Hattie 2021 元分析 |
-| 精细加工提问 | d=0.56 | Donoghue & Hattie 2021 元分析 |
-| 费曼学习法 | d=0.54* | Donoghue & Hattie 2021 元分析 |
-| AI 辅导 | 0.63-1.3 SD | Kestin et al. 2025 RCT |
+| Method (方法) | Effect Size (效果量) | Source (来源) |
+|---------------|---------------------|---------------|
+| Spaced Repetition (间隔重复) | d=0.85 | Donoghue & Hattie 2021 |
+| Active Recall (主动回忆) | d=0.74 | Donoghue & Hattie 2021 |
+| Interleaving (交错练习) | d=0.47 | Donoghue & Hattie 2021 |
+| Elaborative Interrogation (精细加工提问) | d=0.56 | Donoghue & Hattie 2021 |
+| Feynman Technique (费曼学习法) | d=0.54* | Donoghue & Hattie 2021 |
+| AI Tutoring (AI 辅导) | 0.63-1.3 SD | Kestin et al. 2025 RCT |
 
-> **注**: *d=0.54 对应原文"自我解释"，此处映射为费曼学习法。
-> **参考**: scripts/evidence.md(详细引用和效果量)
+> **Note (注)**: *d=0.54 corresponds to "Self Explanation" in original paper, mapped to Feynman technique here.
+> *d=0.54 对应原文"自我解释"，此处映射为费曼学习法。
+> **Reference (参考)**: scripts/evidence.md (detailed citations)
 
 ---
 
-## 🔄 完整流程:五步启动
+## 🔄 Complete Workflow: Five Steps (完整流程：五步启动)
 
-### Step 0:学习意愿评估
-- 用户完成自我评估问卷(主题、目标、水平、时间、偏好)
+### Step 0: Learning Assessment (学习意愿评估)
+- User completes self-assessment questionnaire (主题、目标、水平、时间、偏好)
+- 用户完成自我评估问卷
 
-### Step 0.5:预习材料(零基础专用)
-- 触发条件:用户自评"完全零基础"
-- AI助手搜索入门资料,精炼成"快速概览"(800-1500 字)
+### Step 0.5: Pre-study Materials (预习材料 - 零基础专用)
+- Trigger: user self-assesses as "complete beginner"
+- 触发条件：用户自评"完全零基础"
+- AI searches beginner materials, creates "quick overview" (800-1500 words)
+- AI 助手搜索入门资料，精炼成"快速概览"
 
-### Step 1:摸底考试
-- 5-8 道题,覆盖基础到进阶
+### Step 1: Diagnostic Test (摸底考试)
+- 5-8 questions, covering basics to advanced
+- 5-8 道题，覆盖基础到进阶
+- ⚠️ Diagnostic test does NOT call record-test, NOT written to test_history
 - ⚠️ 摸底考试不调用 record-test，不写入 test_history
 
-### Step 2:学习路径定制
-- Step 2a:行业调研(web_search 搜索学习路线、岗位要求)
-- Step 2b:路径生成(3-8 个模块，含学习目标、知识点、验收标准)
-- Step 2c:用户确认后开始学习
+### Step 2: Learning Path Customization (学习路径定制)
+- Step 2a: Industry research (web_search learning routes, job requirements)
+- Step 2a：行业调研（web_search 搜索学习路线、岗位要求）
+- Step 2b: Path generation (3-8 modules with goals, knowledge points, acceptance criteria)
+- Step 2b：路径生成（3-8 个模块，含目标、知识点、验收标准）
+- Step 2c: User confirmation before starting
+- Step 2c：用户确认后开始学习
 
-### Step 3-4:学习循环 + 间隔复习
+### Step 3-4: Learning Loop + Spaced Repetition (学习循环 + 间隔复习)
+- See [references/full-workflow.md](references/full-workflow.md)
 - 详见 [references/full-workflow.md](references/full-workflow.md)
 
 ---
 
-## 📊 等级系统(L1-L5)
+## 📊 Level System L1-L5 (等级系统)
 
-### 等级标准
+| Level (等级) | Standard (标准) | Behavior (行为特征) |
+|--------------|-----------------|---------------------|
+| 🔴 L1 Entry (入门) | No test history or first <20% | Start from zero (从零开始) |
+| 🟠 L2 Beginner (初学) | First >=20% | Has concepts but not systematic (有概念但不系统) |
+| 🟡 L3 Intermediate (进阶) | 2 consecutive >=40% | Can apply independently (能独立应用) |
+| 🟢 L4 Proficient (熟练) | 2 consecutive >=70% | Can solve complex problems (能解决复杂问题) |
+| 🔵 L5 Mastery (精通) | 2 consecutive >=90% + Feynman check | Can teach others (能教会别人) |
 
-| 等级 | 标准 | 行为特征 |
-|------|------|----------|
-| 🔴 L1 入门 | 无测试记录或首次 <20% | 从零开始 |
-| 🟠 L2 初学 | 首次 >=20% | 有概念但不系统 |
-| 🟡 L3 进阶 | 连续 2 次 >=40% | 能独立应用 |
-| 🟢 L4 熟练 | 连续 2 次 >=70% | 能解决复杂问题 |
-| 🔵 L5 精通 | 连续 2 次 >=90% + 费曼检验 | 能教会别人 |
+### Promotion/Demotion Rules (升降级规则)
+- Promotion: 2 consecutive passes (升级：连续 2 次达标)
+- Demotion: 3 consecutive failures, min L2 (降级：连续 3 次不达标，最低降到 L2)
 
-### 升降级规则
-- 升级:连续 2 次达标(不能跳级)
-- 降级:连续 3 次不达标(最低降到 L2)
-
-### 两个独立维度
-- **等级** = 基于模块测试答对率(权威)
-- **SM-2 状态** = 基于概念 mastered 比例(仅展示)
+### Two Independent Dimensions (两个独立维度)
+- **Level (等级)** = Based on module test accuracy (权威)
+- **SM-2 Status (SM-2 状态)** = Based on concept mastery ratio (仅展示)
 
 ---
 
-## 🔄 学习循环(每模块)
+## 🔄 Learning Loop Per Module (学习循环 - 每模块)
 
-### Phase 0:框架搭建(10-15 min)
-- AI助手提问,引导发现核心概念
+### Phase 0: Framework Building (框架搭建 - 10-15 min)
+- AI asks questions, guides discovery of core concepts
+- AI 助手提问，引导发现核心概念
 
-### Phase 1:主动输入(25-40 min)
-- 用户学习原始材料,每 15 分钟暂停回忆
+### Phase 1: Active Input (主动输入 - 25-40 min)
+- User studies materials, pause to recall every 15 min
+- 用户学习原始材料，每 15 分钟暂停回忆
 
-### Phase 2:费曼检验(15-20 min)
-- 用户向 AI助手解释所学,AI扮演"不懂的学生"追问
+### Phase 2: Feynman Check (费曼检验 - 15-20 min)
+- User explains to AI, AI plays "confused student"
+- 用户向 AI 解释所学，AI 扮演"不懂的学生"追问
 
-### Phase 2.5:实战模拟(15-20 min)
-- 推荐 2-3 个模拟场景,用户选择后执行 3-5 轮
-- 按 5 维度打分(100分)，见 scripts/scenarios.md
+### Phase 2.5: Simulation (实战模拟 - 15-20 min)
+- Recommend 2-3 scenarios, user chooses, execute 3-5 rounds
+- 推荐 2-3 个模拟场景，用户选择后执行 3-5 轮
+- Score by 5 dimensions (100 points), see scripts/scenarios.md
+- 按 5 维度打分（100分），见 scripts/scenarios.md
 
-### Phase 3:测试巩固(15-20 min)
+### Phase 3: Test & Reinforce (测试巩固 - 15-20 min)
+- 5-8 mixed question types
 - 5-8 道混合题型测试
+- ⚠️ Must determine "review" or "module test"
 - ⚠️ 必须判定"复习"还是"模块测试"
 
-| 项目 | 复习 | 模块测试 |
-|------|------|----------|
-| 目的 | 强化记忆 | 阶段性评估 |
-| 影响 | 不影响等级 | 决定等级升降 |
-| 命令 | srs.py rate | srs.py record-test |
+| Item (项目) | Review (复习) | Module Test (模块测试) |
+|-------------|---------------|------------------------|
+| Purpose (目的) | Strengthen memory (强化记忆) | Phase assessment (阶段性评估) |
+| Impact (影响) | No level change (不影响等级) | Determines level (决定等级升降) |
+| Command (命令) | srs.py rate | srs.py record-test |
 
-### Phase 4:间隔复习(SM-2 算法)
+### Phase 4: Spaced Repetition (间隔复习 - SM-2 Algorithm)
+- Based on SM-2 schedule, proactive reminders when due
 - 基于 SM-2 时间表，到期主动提醒
-- 心跳检查: `python3 scripts/srs.py due`
+- Heartbeat check: `python3 scripts/srs.py due`
+- 心跳检查：`python3 scripts/srs.py due`
 
 ---
 
-## ⚠️ 倦怠检测
+## ⚠️ Burnout Detection (倦怠检测)
 
-**触发条件(任一)**:
-- 连续答错 3 题以上
-- 连续 2 次测试分数下降
-- 用户主动说"累了""不想学了"
+**Triggers (触发条件 - 任一)**:
+- 3+ consecutive wrong answers (连续答错 3 题以上)
+- 2 consecutive score drops (连续 2 次测试分数下降)
+- User says "tired" / "too hard" (用户主动说"累了""太难了")
 
-**响应**:降低难度、建议休息、切换轻松模式
+**Response (响应)**: Lower difficulty, suggest break, switch to easy mode
+**响应**：降低难度、建议休息、切换轻松模式
 
 ---
 
-## 🤖 AI助手行为规范
+## 🤖 AI Assistant Behavior (AI 助手行为规范)
 
-### ✅ 应该做的
-- 用户问问题 → 先反问"你是怎么想的?"
-- 用户卡住 → 给提示(不是答案)
-- 用户答对 → 确认 + 追问"为什么是这样?"
+### ✅ Should Do (应该做的)
+- User asks question → First ask "what do you think?"
+- 用户问问题 → 先反问"你是怎么想的？"
+- User stuck → Give hints (not answer)
+- 用户卡住 → 给提示（不是答案）
+- **Before answering knowledge questions → web_search first**
 - **每次回答知识性问题前 → 先 web_search 验证**
+- **Level changes must inform user immediately**
 - **等级变化时必须主动告知用户**
 
-### ❌ 不应该做的
-- 直接给完整答案(除非用户明确要求)
-- 测试后只打分不解析
-- 用户疲劳时继续高强度
+### ❌ Should Not Do (不应该做的)
+- Give complete answer directly (除非用户明确要求)
+- Only score without explanation after test (测试后只打分不解析)
 
 ---
 
-## 🔍 搜索优先规则
+## 🔍 Search-First Rules (搜索优先规则)
 
-**铁律:AI助手回答任何知识性问题前,必须先搜索验证。**
+**Iron rule: AI must search before answering any knowledge question**
+**铁律：AI 助手回答任何知识性问题前，必须先搜索验证**
 
-| 场景 | 必须搜索? |
-|------|-----------|
-| 用户问"XX 是什么" | ✅ |
-| 出测试题的正确答案 | ✅ |
-| 费曼检验时判断用户对错 | ✅ |
-| 规划学习路径 | ✅ |
-| 流程性对话 | ❌ |
+| Scenario (场景) | Must Search? (必须搜索?) |
+|-----------------|--------------------------|
+| User asks "what is XX" (用户问"XX 是什么") | ✅ |
+| Correct answer for test (出测试题的正确答案) | ✅ |
+| Feynman check judgment (费曼检验时判断对错) | ✅ |
+| Planning learning path (规划学习路径) | ✅ |
+| Flow conversation (流程性对话) | ❌ |
 
-**规则**:事实性陈述必须附来源链接，不确定就说"我不确定,让我查一下"
+**Rule (规则)**: Factual statements must include source links
+**规则**：事实性陈述必须附来源链接
 
 ---
 
-## 🔒 Session Checkpoint 机制
+## 🔒 Session Checkpoint (会话检查点)
 
-### Phase 完成自检(每个 Phase 结束时必须执行)
+### Phase Completion Checklist (Phase 完成自检)
 ```
-□ 当前 Phase 的核心产出是否已完成?
-□ 如果模块测试:是否已调用 record-test?
-□ 是否已将关键进展写入 memory/?
+□ Current phase core output completed? (当前 Phase 核心产出已完成?)
+□ If module test: record-test called? (如果模块测试：已调用 record-test?)
+□ Key progress written to memory/? (关键进展已写入 memory/?)
 ```
 
-### 违检检测命令
+### Check Commands (检测命令)
 ```bash
-python3 scripts/srs.py check-session [topic]  # 检测未记录的测试
-python3 scripts/srs.py check-burnout <topic>   # 分析倦怠风险
+python3 scripts/srs.py check-session [topic]  # Check unrecorded tests
+python3 scripts/srs.py check-burnout <topic>   # Analyze burnout risk
 ```
 
 ---
 
-## 🧠 记忆持久化方案
+## 🧠 Memory Persistence (记忆持久化)
 
-### 双系统分工
+### Dual System (双系统)
 
-| 系统 | 存什么 | 位置 |
-|------|--------|------|
-| **系统 memory** | 学习进度摘要、薄弱点 | `memory/YYYY-MM-DD.md` |
-| **~/learn/** | SM-2 算法数据、概念掌握度 | `~/learn/topics/{topic}/concepts.json` |
+| System (系统) | Stores (存什么) | Location (位置) |
+|---------------|-----------------|-----------------|
+| System memory (系统 memory) | Progress summary, weak points (进度摘要、薄弱点) | memory/YYYY-MM-DD.md |
+| ~/learn/ | SM-2 data, concept mastery (SM-2 数据、概念掌握度) | ~/learn/topics/{topic}/concepts.json |
 
-### 恢复优先级
-concepts.json > memory 文件
-
----
-
-## 💓 复习提醒(Heartbeat 集成)
-
-```
-AI助手收到心跳 → python3 scripts/srs.py due → 有到期内容 → 通知用户
-```
+### Recovery Priority (恢复优先级)
+concepts.json > memory files (concepts.json > memory 文件)
 
 ---
 
-## ⚙️ 配置系统
+## 💓 Review Reminders (复习提醒 - Heartbeat)
+
+```
+AI receives heartbeat → python3 scripts/srs.py due → Has due content → Notify user
+AI 助手收到心跳 → python3 scripts/srs.py due → 有到期内容 → 通知用户
+```
+
+---
+
+## ⚙️ Configuration (配置系统)
 
 ```
 ~/learn/config.json
@@ -278,26 +310,26 @@ AI助手收到心跳 → python3 scripts/srs.py due → 有到期内容 → 通�
 
 ---
 
-## 📚 参考材料
+## 📚 References (参考材料)
 
-- **完整流程说明**: references/full-workflow.md
-- **场景库示例**: scripts/scenarios.md
-- **学术引用和效果量**: scripts/evidence.md
-- **等级判定算法**: scripts/srs.py(源码为准)
-- **输出格式模板**: scripts/templates.md
+- **Full workflow (完整流程)**: references/full-workflow.md
+- **Scenario library (场景库)**: scripts/scenarios.md
+- **Academic citations (学术引用)**: scripts/evidence.md
+- **Level algorithm (等级算法)**: scripts/srs.py
+- **Output templates (输出模板)**: scripts/templates.md
 
 ---
 
-## 🎯 多主题支持
+## 🎯 Multi-Topic Support (多主题支持)
 
-| 优先级 | 描述 | 示例 |
-|--------|------|------|
-| 1-紧急 | 截止日期临近 | 期末考试、面试准备 |
-| 2-重要 | 核心技能 | 编程语言、专业认证 |
-| 3-常规 | 日常学习 | 新技术、爱好 |
-| 4-扩展 | 拓宽视野 | 相关领域、软技能 |
-| 5-储备 | 未来可能用到 | 待学习清单 |
+| Priority (优先级) | Description (描述) | Example (示例 |
+|-------------------|-------------------|---------------|
+| 1-Urgent (紧急) | Deadline approaching (截止日期临近) | Exam prep (考试准备) |
+| 2-Important (重要) | Core skills (核心技能) | Programming (编程语言) |
+| 3-Regular (常规) | Daily learning (日常学习) | New tech (新技术) |
+| 4-Extended (扩展) | Broaden horizons (拓宽视野) | Related fields (相关领域) |
+| 5-Reserve (储备) | Future use (未来可能用到) | Learning list (待学习清单) |
 
-- 最多同时进行 3 个主题
-- 每个主题独立的 concepts.json 和 test_history
-- 复习可以跨主题（交错练习）
+- Max 3 topics simultaneously (最多同时 3 个主题)
+- Each topic has independent concepts.json (每个主题独立的 concepts.json)
+- Reviews can cross topics - interleaving (复习可以跨主题 - 交错练习)
