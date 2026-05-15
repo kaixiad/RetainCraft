@@ -24,6 +24,7 @@ from srs import (
     check_burnout,
     check_session,
     compare_profile_with_job,
+    load_learning_log,
     load_profile,
     load_test_history,
     record_test,
@@ -1963,6 +1964,88 @@ class TestCheckBurnout(TestCase):
     def test_invalid_topic_raises(self):
         with self.assertRaises(srs.SanitizeError):
             check_burnout("../evil")
+
+
+class TestLearningLog(TestCase):
+    """Test learning log functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.learning_log_file = Path(self.temp_dir) / "learning_log.json"
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if self.learning_log_file.exists():
+            self.learning_log_file.unlink()
+        os.rmdir(self.temp_dir)
+
+    def test_load_learning_log_empty(self):
+        """Test loading empty learning log."""
+        result = srs.load_learning_log()
+        self.assertIsInstance(result, list)
+
+    def test_append_learning_log(self):
+        """Test appending to learning log."""
+        # Mock LEARNING_LOG_FILE
+        original_file = srs.LEARNING_LOG_FILE
+        srs.LEARNING_LOG_FILE = self.learning_log_file
+        try:
+            srs.append_learning_log("rate", "math", {"concept": "algebra", "rating": "good"})
+            log = srs.load_learning_log()
+            self.assertEqual(len(log), 1)
+            self.assertEqual(log[0]["action"], "rate")
+            self.assertEqual(log[0]["topic"], "math")
+        finally:
+            srs.LEARNING_LOG_FILE = original_file
+
+    def test_get_last_learning_time_empty(self):
+        """Test getting last learning time from empty log."""
+        # Mock LEARNING_LOG_FILE
+        original_file = srs.LEARNING_LOG_FILE
+        srs.LEARNING_LOG_FILE = self.learning_log_file
+        try:
+            result = srs.get_last_learning_time()
+            self.assertIsNone(result)
+        finally:
+            srs.LEARNING_LOG_FILE = original_file
+
+
+class TestSM2SecondInterval(TestCase):
+    """Test SM-2 second interval fix."""
+
+    def test_second_review_interval_is_6_days(self):
+        """Test that second review interval is 6 days (original SM-2)."""
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 1
+        concept["interval_days"] = 1
+        concept["ease_factor"] = 2.5
+
+        # First review with "good"
+        updated = calc_next_review(concept, "good")
+        self.assertEqual(updated["interval_days"], 6)
+
+    def test_third_review_uses_ease_factor(self):
+        """Test that third review uses ease_factor multiplication."""
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 2
+        concept["interval_days"] = 6
+        concept["ease_factor"] = 2.5
+
+        # Third review with "good"
+        updated = calc_next_review(concept, "good")
+        self.assertEqual(updated["interval_days"], 15)  # 6 * 2.5 = 15
+
+    def test_wrong_rating_resets_interval(self):
+        """Test that wrong rating resets interval to 1 day."""
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 5
+        concept["interval_days"] = 30
+        concept["ease_factor"] = 2.5
+
+        # Review with "wrong"
+        updated = calc_next_review(concept, "wrong")
+        self.assertEqual(updated["interval_days"], 1)
 
 
 if __name__ == "__main__":
