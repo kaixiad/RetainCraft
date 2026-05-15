@@ -21,6 +21,11 @@ Usage:
     python3 srs.py check-burnout <topic>      # Analyze burnout risk
     python3 srs.py config                     # Show config
     python3 srs.py config set <key> <value>  # Set config value
+    python3 srs.py setup-reminder             # Setup learning reminder + weekly report cron
+    python3 srs.py reminder                   # Generate today's learning plan
+    python3 srs.py weekly-report              # Generate weekly report data
+    python3 srs.py check-reminder             # Check reminder status
+    python3 srs.py switch-channel             # Switch reminder notification channel
 
 Storage: ~/learn/
 """
@@ -31,6 +36,7 @@ import copy
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from datetime import datetime, timedelta
@@ -101,6 +107,10 @@ CONFIG_FILE = LEARN_DIR / "config.json"
 TEST_HISTORY_FILE = LEARN_DIR / "test_history.json"
 SIMULATION_HISTORY_FILE = LEARN_DIR / "simulation_history.json"
 PROFILE_FILE = LEARN_DIR / "profile.json"
+LEARNING_LOG_FILE = LEARN_DIR / "learning_log.json"
+
+# For cron detection (used by setup-reminder)
+SCRIPTS_DIR = Path(__file__).parent
 
 DEFAULT_CONFIG = {
     "learning_depth": "standard",
@@ -127,6 +137,7 @@ DEFAULT_CONCEPT = {
     "total_count": 0,
     "mastery": "unseen",
 }
+
 
 def _atomic_json_save(filepath: Path, data: dict) -> None:
     """
@@ -181,6 +192,60 @@ def _atomic_text_save(filepath: Path, content: str) -> None:
         raise
 
 
+def load_learning_log() -> list[dict[str, Any]]:
+    """
+    Load learning log from file.
+
+    Returns:
+        List of learning log entries
+    """
+    if LEARNING_LOG_FILE.exists():
+        try:
+            with open(LEARNING_LOG_FILE, encoding='utf-8') as f:
+                return json.load(f)
+        except (json.JSONDecodeError, IOError):
+            return []
+    return []
+
+
+def append_learning_log(action: str, topic: str, details: dict[str, Any]) -> None:
+    """
+    Append an entry to the learning log.
+
+    Args:
+        action: Action type (e.g., "rate", "record-test")
+        topic: Topic name
+        details: Additional details about the action
+    """
+    log = load_learning_log()
+    entry = {
+        "timestamp": datetime.now().isoformat(),
+        "action": action,
+        "topic": topic,
+        **details
+    }
+    log.append(entry)
+    LEARNING_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_json_save(LEARNING_LOG_FILE, log)
+
+
+def get_last_learning_time() -> datetime | None:
+    """
+    Get the timestamp of the last learning activity.
+
+    Returns:
+        datetime of last activity, or None if no activity found
+    """
+    log = load_learning_log()
+    if not log:
+        return None
+    try:
+        last_entry = log[-1]
+        return datetime.fromisoformat(last_entry["timestamp"])
+    except (ValueError, KeyError):
+        return None
+
+
 def load_test_history() -> dict[str, list[dict[str, Any]]]:
     """
     Load test history from file.
@@ -196,6 +261,7 @@ def load_test_history() -> dict[str, list[dict[str, Any]]]:
             return {}
     return {}
 
+
 def save_test_history(history: dict[str, list[dict[str, Any]]]) -> None:
     """
     Save test history to file using atomic write.
@@ -205,6 +271,7 @@ def save_test_history(history: dict[str, list[dict[str, Any]]]) -> None:
     """
     ensure_dirs()
     _atomic_json_save(TEST_HISTORY_FILE, history)
+
 
 def record_test(topic: str, total: int, correct: int) -> dict[str, Any]:
     """
@@ -242,7 +309,14 @@ def record_test(topic: str, total: int, correct: int) -> dict[str, Any]:
     }
     history[topic].append(test_result)
     save_test_history(history)
+    # Log the test action
+    append_learning_log("record-test", topic, {
+        "total": total,
+        "correct": correct,
+        "accuracy": correct / total
+    })
     return test_result
+
 
 def load_simulation_history() -> dict[str, list[dict[str, Any]]]:
     """
@@ -259,6 +333,7 @@ def load_simulation_history() -> dict[str, list[dict[str, Any]]]:
             return {}
     return {}
 
+
 def save_simulation_history(history: dict[str, list[dict[str, Any]]]) -> None:
     """
     Save simulation history to file using atomic write.
@@ -268,6 +343,7 @@ def save_simulation_history(history: dict[str, list[dict[str, Any]]]) -> None:
     """
     ensure_dirs()
     _atomic_json_save(SIMULATION_HISTORY_FILE, history)
+
 
 def record_simulation(topic: str, scenario: str, score: int, rounds: int = 3) -> dict[str, Any]:
     """
@@ -304,7 +380,14 @@ def record_simulation(topic: str, scenario: str, score: int, rounds: int = 3) ->
     }
     history[topic].append(simulation_result)
     save_simulation_history(history)
+    # Log the simulation action
+    append_learning_log("record-simulation", topic, {
+        "scenario": scenario,
+        "score": score,
+        "rounds": rounds
+    })
     return simulation_result
+
 
 def check_session(topic: str | None = None, stale_minutes: int = 120) -> dict[str, Any]:
     """
@@ -480,6 +563,7 @@ def load_profile() -> dict[str, Any]:
         "last_updated": datetime.now().isoformat()
     }
 
+
 def save_profile(profile: dict[str, Any]) -> None:
     """
     Save user profile to file using atomic write.
@@ -490,6 +574,7 @@ def save_profile(profile: dict[str, Any]) -> None:
     ensure_dirs()
     profile["last_updated"] = datetime.now().isoformat()
     _atomic_json_save(PROFILE_FILE, profile)
+
 
 def update_profile(topic: str) -> dict[str, Any]:
     """
@@ -546,6 +631,7 @@ def update_profile(topic: str) -> dict[str, Any]:
     save_profile(profile)
     return profile
 
+
 def compare_profile_with_job(job_title: str) -> dict[str, Any]:
     """
     Compare user profile with job requirements.
@@ -599,6 +685,7 @@ def compare_profile_with_job(job_title: str) -> dict[str, Any]:
         "total_hours": total_hours,
         "suggestion": f"Run Step 2a industry research to search for '{job_title} 岗位要求' and get gap analysis."
     }
+
 
 def calc_level_by_accuracy(topic: str, concepts_fallback: dict[str, Any] | None = None) -> tuple[str, str, str]:
     """
@@ -665,18 +752,16 @@ def calc_level_by_accuracy(topic: str, concepts_fallback: dict[str, Any] | None 
 
     # --- Demotion check ---
     # Maintain thresholds: L2=0.2, L3=0.4, L4=0.7, L5=0.9
-    # If last 3 consecutive tests ALL below current level threshold, demote one level
+    # Demotion check: only demote ONE level per check (gradual degradation)
+    # SM-2 principle: incorrect answers reset interval but don't skip stages
+    # Ebbinghaus: forgetting is continuous, not stepwise
     maintain_thresholds = {2: level_thresholds["L2"], 3: level_thresholds["L3"], 4: level_thresholds["L4"], 5: level_thresholds["L5"]}
 
-    while level >= 3 and len(history) >= 3:
+    if level >= 3 and len(history) >= 3:
         threshold = maintain_thresholds[level]
         last3 = history[-3:]
         if all(h["accuracy"] < threshold for h in last3):
-            level -= 1  # demote one level
-            # After demotion, check if we need to demote further
-            # The while loop will continue checking with the new level threshold
-        else:
-            break
+            level -= 1  # demote one level only
 
     level_map = {
         "L1": ("L1", "入门 (Novice)", "[L1]"),
@@ -686,6 +771,7 @@ def calc_level_by_accuracy(topic: str, concepts_fallback: dict[str, Any] | None 
         "L5": ("L5", "精通 (Mastery)", "[L5]")
     }
     return level_map.get(f"L{level}", level_map["L1"])
+
 
 def calc_mastery_overview(concepts: dict[str, Any]) -> tuple[int, int, float]:
     """
@@ -867,6 +953,9 @@ def calc_next_review(concept: dict[str, Any], rating: str, config: dict[str, Any
         raise ValueError(f"Invalid rating: {rating}. Must be 'easy', 'good', 'hard', or 'wrong'")
     
     c = concept.copy()
+    # reviews==1 means this is the 2nd review (0-indexed), check before incrementing
+    is_second_review = (c["reviews"] == 1)
+
     c["reviews"] += 1
     c["total_count"] += 1
 
@@ -884,11 +973,19 @@ def calc_next_review(concept: dict[str, Any], rating: str, config: dict[str, Any
         c["ease_factor"] = max(1.3, c["ease_factor"] - 0.15)
         c["correct_count"] += 1
     elif rating == "good":
-        c["interval_days"] = max(1, int(c["interval_days"] * c["ease_factor"]))
+        # SM-2 fix: second review should be 6 days (original SM-2 algorithm)
+        if is_second_review:
+            c["interval_days"] = 6
+        else:
+            c["interval_days"] = max(1, int(c["interval_days"] * c["ease_factor"]))
         # ease_factor unchanged
         c["correct_count"] += 1
     elif rating == "easy":
-        c["interval_days"] = max(1, int(c["interval_days"] * (c["ease_factor"] + 0.15)))
+        # SM-2 fix: second review should be 6 days (original SM-2 algorithm)
+        if is_second_review:
+            c["interval_days"] = 6
+        else:
+            c["interval_days"] = max(1, int(c["interval_days"] * (c["ease_factor"] + 0.15)))
         c["ease_factor"] = c["ease_factor"] + 0.15
         c["correct_count"] += 1
 
@@ -1075,6 +1172,11 @@ def cmd_rate(topic: str, concept_name: str, rating: str) -> None:
     updated = calc_next_review(c, rating)
     concepts[concept_name] = updated
     save_concepts(topic, concepts)
+    # Log the rating action
+    append_learning_log("rate", topic, {
+        "concept": concept_name,
+        "rating": rating
+    })
     print(f"[OK] Rated '{concept_name}' as '{rating}'. Next review: {updated['next_review']}")
 
 
@@ -1336,6 +1438,400 @@ def cmd_config(key: str | None = None, value: str | None = None) -> None:
     print(f"  [OK] {key} = {converted_value}")
 
 
+def _cron_exists(name: str) -> bool:
+    """
+    Check if a cron job with the given name exists.
+
+    Args:
+        name: Cron job name to check
+
+    Returns:
+        True if the cron job exists, False otherwise
+    """
+    try:
+        result = subprocess.run(
+            ["openclaw", "cron", "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode != 0:
+            return False
+        data = json.loads(result.stdout)
+        # openclaw cron list --json returns {"jobs": [...], ...}
+        jobs = data.get("jobs", []) if isinstance(data, dict) else data
+        return any(j.get("name") == name for j in jobs)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
+        return False
+
+
+def _get_user_channel() -> str | None:
+    """
+    Detect the user's current channel from OpenClaw sessions.
+
+    Returns:
+        Channel provider name (e.g., "telegram", "qqbot"), or None if not detected
+    """
+    try:
+        result = subprocess.run(
+            ["openclaw", "sessions", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        if result.returncode != 0:
+            return None
+        data = json.loads(result.stdout)
+        # openclaw sessions --json returns {"sessions": [...], ...}
+        sessions = data.get("sessions", []) if isinstance(data, dict) else data
+        for session in sessions:
+            if not isinstance(session, dict):
+                continue
+            if session.get("type") == "main":
+                origin = session.get("origin", {})
+                return origin.get("provider")
+        return None
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
+        return None
+
+
+def _delete_cron(name: str) -> bool:
+    """Delete a cron job by name. Returns True if deleted."""
+    try:
+        result = subprocess.run(
+            ["openclaw", "cron", "delete", "--name", name],
+            capture_output=True, text=True, timeout=10
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+def _recreate_crons_with_channel(channel: str) -> None:
+    """Delete existing crons and recreate them with the given channel."""
+    config = load_config()
+    contract = config.get("learning_contract", {})
+    reminder_time = contract.get("time", "09:00")
+    hour = reminder_time.split(":")[0]
+
+    # Delete existing crons
+    _delete_cron("retaincraft-reminder")
+    _delete_cron("retaincraft-weekly-report")
+
+    # Recreate daily reminder
+    cron_args = [
+        "openclaw", "cron", "add",
+        "--name", "retaincraft-reminder",
+        "--cron", f"0 {hour} * * *",
+        "--tz", "Asia/Shanghai",
+        "--session", "isolated",
+        "--channel", channel,
+        "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} reminder",
+        "--announce"
+    ]
+    try:
+        subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    # Recreate weekly report
+    cron_args = [
+        "openclaw", "cron", "add",
+        "--name", "retaincraft-weekly-report",
+        "--cron", "0 20 * * 0",
+        "--tz", "Asia/Shanghai",
+        "--session", "isolated",
+        "--channel", channel,
+        "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} weekly-report",
+        "--announce"
+    ]
+    try:
+        subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+
+def cmd_setup_reminder() -> None:
+    """Setup learning reminder and weekly report cron jobs."""
+    config = load_config()
+    contract = config.get("learning_contract", {})
+    reminder_time = contract.get("time", "09:00")
+
+    # Validate time format (HH:MM)
+    import re as _re
+    if not _re.match(r'^\d{2}:\d{2}$', reminder_time):
+        print(f"[WARN] Invalid reminder time format: '{reminder_time}'. Expected HH:MM (e.g., '09:00').")
+        print("       Using default: 09:00")
+        reminder_time = "09:00"
+
+    hour = reminder_time.split(":")[0]
+
+    # Detect user channel
+    user_channel = _get_user_channel()
+
+    # Setup daily reminder
+    if _cron_exists("retaincraft-reminder"):
+        print("[OK] Learning reminder cron already exists.")
+    else:
+        cron_args = [
+            "openclaw", "cron", "add",
+            "--name", "retaincraft-reminder",
+            "--cron", f"0 {hour} * * *",
+            "--tz", "Asia/Shanghai",
+            "--session", "isolated",
+            "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} reminder",
+            "--announce"
+        ]
+        if user_channel:
+            cron_args.extend(["--channel", user_channel])
+
+        try:
+            result = subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                print(f"[OK] Learning reminder cron created (daily at {reminder_time}).")
+                if user_channel:
+                    print(f"     Channel: {user_channel}")
+            else:
+                print(f"[WARN] Failed to create reminder cron: {result.stderr}")
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            print(f"[WARN] Failed to create reminder cron: {e}")
+
+    # Setup weekly report
+    if _cron_exists("retaincraft-weekly-report"):
+        print("[OK] Weekly report cron already exists.")
+    else:
+        cron_args = [
+            "openclaw", "cron", "add",
+            "--name", "retaincraft-weekly-report",
+            "--cron", "0 20 * * 0",
+            "--tz", "Asia/Shanghai",
+            "--session", "isolated",
+            "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} weekly-report",
+            "--announce"
+        ]
+        if user_channel:
+            cron_args.extend(["--channel", user_channel])
+
+        try:
+            result = subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                print("[OK] Weekly report cron created (Sunday at 20:00).")
+            else:
+                print(f"[WARN] Failed to create weekly report cron: {result.stderr}")
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            print(f"[WARN] Failed to create weekly report cron: {e}")
+
+
+def cmd_check_reminder() -> None:
+    """Check the status of learning reminders."""
+    print("\n[CHECK-REMINDER] Reminder Status:\n")
+
+    # Check daily reminder
+    if _cron_exists("retaincraft-reminder"):
+        config = load_config()
+        contract = config.get("learning_contract", {})
+        reminder_time = contract.get("time", "09:00")
+        channel = _get_user_channel() or "auto-detect"
+        print(f"  ✅ Learning reminder: ENABLED")
+        print(f"     Time: {reminder_time}")
+        print(f"     Channel: {channel}")
+    else:
+        print(f"  ⚠️  Learning reminder: NOT ENABLED")
+        print(f"     Run 'srs.py setup-reminder' to enable")
+
+    # Check weekly report
+    if _cron_exists("retaincraft-weekly-report"):
+        print(f"  ✅ Weekly report: ENABLED")
+        print(f"     Schedule: Sunday at 20:00")
+    else:
+        print(f"  ⚠️  Weekly report: NOT ENABLED")
+        print(f"     Run 'srs.py setup-reminder' to enable")
+
+
+def cmd_switch_channel() -> None:
+    """List available notification channels and switch the active one."""
+    current = _get_user_channel()
+    print(f"\n[SWITCH-CHANNEL] Current channel: {current or 'not detected'}\n")
+
+    # List available channels from config
+    config = load_config()
+    channels = config.get("reminder_channels", [])
+
+    if not channels:
+        print("  No channels configured. Add channels to config.json:")
+        print('  "reminder_channels": [')
+        print('    {"type": "telegram", "target": "-1001234567890"},')
+        print('    {"type": "qqbot", "target": "group123"}')
+        print('  ]')
+        return
+
+    print("  Available channels:")
+    for i, ch in enumerate(channels, 1):
+        marker = " (current)" if ch["type"] == current else ""
+        print(f"    {i}. {ch['type']} - {ch['target']}{marker}")
+
+    # Prompt user to select a channel
+    print()
+    try:
+        choice = input("  Enter channel number to switch (or press Enter to cancel): ").strip()
+    except (EOFError, KeyboardInterrupt):
+        print("\n  Cancelled.")
+        return
+
+    if not choice:
+        print("  Cancelled.")
+        return
+
+    try:
+        idx = int(choice) - 1
+        if idx < 0 or idx >= len(channels):
+            print(f"  Invalid choice: {choice}. Must be 1-{len(channels)}.")
+            return
+    except ValueError:
+        print(f"  Invalid input: {choice}. Must be a number.")
+        return
+
+    selected = channels[idx]
+    config["active_channel"] = selected["type"]
+    save_config(config)
+
+    # Recreate cron jobs with the new channel
+    print(f"\n  Switching to: {selected['type']} - {selected['target']}")
+    _recreate_crons_with_channel(selected["type"])
+    print(f"  [OK] Channel switched to {selected['type']}.")
+
+
+def cmd_reminder() -> None:
+    """Generate today's learning plan with forgetting risk analysis."""
+    ensure_dirs()
+    config = load_config()
+    contract = config.get("learning_contract", {})
+
+    # Calculate forgetting risk
+    last_time = get_last_learning_time()
+    now = datetime.now()
+    days_since = (now - last_time).days if last_time else 999
+
+    # Forgetting risk based on Ebbinghaus (1885), validated by Murre & Dros (2015)
+    if days_since >= 7:
+        risk = "critical"
+        risk_msg = f"你已经 {days_since} 天没学习了。知识基本回到起点，建议从最简单的概念重新开始。"
+    elif days_since >= 2:
+        risk = "high"
+        forgetting_rates = {2: 72, 3: 73, 4: 74, 5: 74, 6: 75}
+        forgetting_pct = forgetting_rates.get(days_since, 75)
+        risk_msg = f"你已经 {days_since} 天没学习了。遗忘率已达约{forgetting_pct}%，建议今天只复习，不学新内容。"
+    elif days_since == 1:
+        risk = "low"
+        risk_msg = "昨天没学习，今天复习一下。24 小时是遗忘拐点。"
+    else:
+        risk = "none"
+        risk_msg = ""
+
+    # Get due concepts across all topics
+    today_str = today()
+    topics_due = []
+    for topic_dir in sorted(TOPICS_DIR.iterdir()):
+        if not topic_dir.is_dir():
+            continue
+        concepts = load_concepts(topic_dir.name)
+        if not concepts:
+            continue
+
+        due_concepts = []
+        for name, c in concepts.items():
+            if c["next_review"] and c["next_review"] <= today_str:
+                overdue = calc_overdue(c["next_review"])
+                due_concepts.append({
+                    "name": name,
+                    "status": c["mastery"],
+                    "overdue_days": overdue
+                })
+
+        if due_concepts:
+            # Sort by overdue days (descending)
+            due_concepts.sort(key=lambda x: -x["overdue_days"])
+            topics_due.append({
+                "name": topic_dir.name,
+                "concepts": due_concepts,
+                "count": len(due_concepts)
+            })
+
+    # Build output
+    output = {
+        "date": today_str,
+        "risk": risk,
+        "risk_msg": risk_msg,
+        "days_since_learning": days_since,
+        "topics": topics_due,
+        "total_due": sum(t["count"] for t in topics_due)
+    }
+
+    print(json.dumps(output, ensure_ascii=False, indent=2))
+
+
+def cmd_weekly_report() -> None:
+    """Generate weekly learning report data."""
+    log = load_learning_log()
+    now = datetime.now()
+
+    # Filter logs for the past 7 days
+    week_ago = now - timedelta(days=7)
+    week_log = [
+        entry for entry in log
+        if datetime.fromisoformat(entry["timestamp"]) >= week_ago
+    ]
+
+    # Calculate statistics
+    learning_days = len(set(
+        entry["timestamp"][:10] for entry in week_log
+    ))
+
+    rate_actions = [e for e in week_log if e["action"] == "rate"]
+    test_actions = [e for e in week_log if e["action"] == "record-test"]
+
+    topics_covered = list(set(entry["topic"] for entry in week_log))
+
+    # Calculate average accuracy from tests
+    avg_accuracy = 0
+    if test_actions:
+        accuracies = [e.get("accuracy", 0) for e in test_actions]
+        avg_accuracy = sum(accuracies) / len(accuracies)
+
+    # Detect level changes
+    level_changes = {}
+    for topic in topics_covered:
+        level_code, level_name, level_emoji = calc_level_by_accuracy(topic)
+        level_changes[topic] = f"{level_code} {level_name}"
+
+    # Check burnout status
+    burnout_status = {}
+    for topic in topics_covered:
+        try:
+            burnout = check_burnout(topic)
+            burnout_status[topic] = burnout.get("risk", "unknown")
+        except Exception:
+            burnout_status[topic] = "unknown"
+
+    # Build report
+    report = {
+        "period": {
+            "start": week_ago.strftime("%Y-%m-%d"),
+            "end": now.strftime("%Y-%m-%d")
+        },
+        "learning_days": learning_days,
+        "total_actions": len(week_log),
+        "rate_actions": len(rate_actions),
+        "test_actions": len(test_actions),
+        "topics_covered": topics_covered,
+        "avg_accuracy": avg_accuracy,
+        "level_changes": level_changes,
+        "burnout_status": burnout_status
+    }
+
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+
+
 def main() -> None:
     """Main entry point for the CLI."""
     args = sys.argv[1:]
@@ -1461,6 +1957,7 @@ def main() -> None:
     elif cmd == "profile":
         if len(args) > 1 and args[1] == "--update":
             # Update profile for all topics
+            ensure_dirs()
             topics = [d.name for d in TOPICS_DIR.iterdir() if d.is_dir()]
             if not topics:
                 print("No topics found.")
@@ -1559,6 +2056,21 @@ def main() -> None:
             cmd_config(args[2], args[3])
         else:
             cmd_config(key, value)
+
+    elif cmd == "setup-reminder":
+        cmd_setup_reminder()
+
+    elif cmd == "reminder":
+        cmd_reminder()
+
+    elif cmd == "weekly-report":
+        cmd_weekly_report()
+
+    elif cmd == "check-reminder":
+        cmd_check_reminder()
+
+    elif cmd == "switch-channel":
+        cmd_switch_channel()
 
     else:
         print(f"Unknown command: {cmd}")

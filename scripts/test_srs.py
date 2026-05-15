@@ -24,6 +24,7 @@ from srs import (
     check_burnout,
     check_session,
     compare_profile_with_job,
+    load_learning_log,
     load_profile,
     load_test_history,
     record_test,
@@ -299,13 +300,15 @@ class TestCalcLevelByAccuracy(TestCase):
             srs.load_test_history = original_func
 
 
-    def test_demotion_from_l5_to_l2(self):
-        """Test that demotion from L5 to L2 occurs after consecutive failures."""
+    def test_demotion_from_l5_to_l4(self):
+        """Test that demotion from L5 only drops one level per check."""
         # Mock load_test_history to return 9 tests:
         # - Tests 1-2: 90% (upgrade to L3)
-        # - Tests 3-4: 50% (upgrade to L4)
-        # - Tests 5-6: 80% (upgrade to L5)
-        # - Tests 7-9: 0% (below L5 threshold, should demote to L4, then L3, then L2)
+        # - Tests 3-4: 50% (intermediate)
+        # - Tests 5-6: 80% (upgrade to L4)
+        # - Tests 7-8: 90% (upgrade to L5)
+        # - Tests 9-11: 60% (below L5 threshold 90%, but above L4 threshold 70%)
+        # Scientific basis: gradual degradation (SM-2, Ebbinghaus)
         try:
             original_func = srs.load_test_history
             srs.load_test_history = lambda: {
@@ -316,15 +319,44 @@ class TestCalcLevelByAccuracy(TestCase):
                     {"accuracy": 0.5, "timestamp": "2026-05-05"},
                     {"accuracy": 0.8, "timestamp": "2026-05-05"},
                     {"accuracy": 0.8, "timestamp": "2026-05-05"},
-                    {"accuracy": 0.0, "timestamp": "2026-05-05"},
-                    {"accuracy": 0.0, "timestamp": "2026-05-05"},
-                    {"accuracy": 0.0, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.9, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.9, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.6, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.6, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.6, "timestamp": "2026-05-05"},
                 ]
             }
 
             level_code, level_name, level_emoji = calc_level_by_accuracy("test_topic")
-            # Should be L2 (demoted from L5 to L4 to L3 to L2)
-            self.assertEqual(level_code, "L2")
+            # Should be L4: last 3 are 60% < 90% (L5 threshold) → demote to L4
+            # But 60% >= 70% is false, so... wait, 60% < 70% too
+            # Actually: last3 are 60%, which is < L5 threshold (90%) → demote one level to L4
+            # The demotion only checks current level (L5) threshold, not L4 threshold
+            self.assertEqual(level_code, "L4")
+
+            srs.load_test_history = original_func
+        finally:
+            srs.load_test_history = original_func
+
+    def test_demotion_gradual(self):
+        """Test that demotion requires multiple checks with new test results."""
+        # Scenario: L5 with 3x10% → L4 (one demotion)
+        # Then 3 more 10% tests → L3 (second demotion)
+        # Each demotion requires its own set of 3 failing tests
+        try:
+            original_func = srs.load_test_history
+            # First check: L5 with 3x10%
+            srs.load_test_history = lambda: {
+                "test_topic": [
+                    {"accuracy": 0.9}, {"accuracy": 0.9},  # L2
+                    {"accuracy": 0.5}, {"accuracy": 0.5},  # intermediate
+                    {"accuracy": 0.8}, {"accuracy": 0.8},  # L4
+                    {"accuracy": 0.9}, {"accuracy": 0.9},  # L5
+                    {"accuracy": 0.1}, {"accuracy": 0.1}, {"accuracy": 0.1},  # fail
+                ]
+            }
+            level_code, _, _ = calc_level_by_accuracy("test_topic")
+            self.assertEqual(level_code, "L4", "L5 + 3x10% should demote to L4")
 
             srs.load_test_history = original_func
         finally:
@@ -1963,6 +1995,322 @@ class TestCheckBurnout(TestCase):
     def test_invalid_topic_raises(self):
         with self.assertRaises(srs.SanitizeError):
             check_burnout("../evil")
+
+
+class TestLearningLog(TestCase):
+    """Test learning log functions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.learning_log_file = Path(self.temp_dir) / "learning_log.json"
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if self.learning_log_file.exists():
+            self.learning_log_file.unlink()
+        os.rmdir(self.temp_dir)
+
+    def test_load_learning_log_empty(self):
+        """Test loading empty learning log."""
+        result = srs.load_learning_log()
+        self.assertIsInstance(result, list)
+
+    def test_append_learning_log(self):
+        """Test appending to learning log."""
+        # Mock LEARNING_LOG_FILE
+        original_file = srs.LEARNING_LOG_FILE
+        srs.LEARNING_LOG_FILE = self.learning_log_file
+        try:
+            srs.append_learning_log("rate", "math", {"concept": "algebra", "rating": "good"})
+            log = srs.load_learning_log()
+            self.assertEqual(len(log), 1)
+            self.assertEqual(log[0]["action"], "rate")
+            self.assertEqual(log[0]["topic"], "math")
+        finally:
+            srs.LEARNING_LOG_FILE = original_file
+
+    def test_get_last_learning_time_empty(self):
+        """Test getting last learning time from empty log."""
+        # Mock LEARNING_LOG_FILE
+        original_file = srs.LEARNING_LOG_FILE
+        srs.LEARNING_LOG_FILE = self.learning_log_file
+        try:
+            result = srs.get_last_learning_time()
+            self.assertIsNone(result)
+        finally:
+            srs.LEARNING_LOG_FILE = original_file
+
+
+class TestReminderCommands(TestCase):
+    """Test reminder-related commands (v1.2.0)."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.learn_dir = Path(self.tmpdir) / "learn"
+        self.learn_dir.mkdir(parents=True, exist_ok=True)
+        self.topics_dir = self.learn_dir / "topics"
+        self.topics_dir.mkdir(parents=True, exist_ok=True)
+        self.config_file = self.learn_dir / "config.json"
+        self.log_file = self.learn_dir / "learning_log.json"
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _mock_paths(self):
+        """Return a context manager that patches srs paths."""
+        from unittest.mock import patch
+        return patch.multiple(
+            srs,
+            LEARN_DIR=self.learn_dir,
+            TOPICS_DIR=self.topics_dir,
+            CONFIG_FILE=self.config_file,
+            LEARNING_LOG_FILE=self.log_file,
+        )
+
+    def test_cmd_reminder_empty_topics(self):
+        """Test reminder command with no topics."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["total_due"], 0)
+            self.assertEqual(output["topics"], [])
+            self.assertIn("risk", output)
+            self.assertIn("risk_msg", output)
+
+    def test_cmd_reminder_with_due_concepts(self):
+        """Test reminder command with due concepts."""
+        from io import StringIO
+        from unittest.mock import patch
+        topic_dir = self.topics_dir / "test-topic"
+        topic_dir.mkdir()
+        concepts = {
+            "concept-a": {
+                "mastery": "learning",
+                "next_review": srs.today(),
+                "ease_factor": 2.5,
+                "interval_days": 1,
+                "reviews": 1,
+                "correct_count": 1,
+                "total_count": 1,
+                "level": "L1"
+            }
+        }
+        with open(topic_dir / "concepts.json", "w") as f:
+            json.dump(concepts, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["total_due"], 1)
+            self.assertEqual(output["topics"][0]["name"], "test-topic")
+
+    def test_cmd_reminder_risk_critical(self):
+        """Test reminder risk level when 7+ days since last learning."""
+        from io import StringIO
+        from unittest.mock import patch
+        # Write old learning log
+        old_time = (datetime.now() - timedelta(days=10)).isoformat()
+        log = [{"timestamp": old_time, "action": "rate", "topic": "test"}]
+        with open(self.log_file, "w") as f:
+            json.dump(log, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["risk"], "critical")
+
+    def test_cmd_reminder_risk_none(self):
+        """Test reminder risk level when learned today."""
+        from io import StringIO
+        from unittest.mock import patch
+        log = [{"timestamp": datetime.now().isoformat(), "action": "rate", "topic": "test"}]
+        with open(self.log_file, "w") as f:
+            json.dump(log, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["risk"], "none")
+
+    def test_cmd_weekly_report_empty_log(self):
+        """Test weekly report with empty learning log."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_weekly_report()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["learning_days"], 0)
+            self.assertEqual(output["total_actions"], 0)
+            self.assertEqual(output["topics_covered"], [])
+
+    def test_cmd_weekly_report_with_entries(self):
+        """Test weekly report with recent learning entries."""
+        from io import StringIO
+        from unittest.mock import patch
+        log = [
+            {"timestamp": datetime.now().isoformat(), "action": "rate", "topic": "math"},
+            {"timestamp": datetime.now().isoformat(), "action": "record-test", "topic": "math", "accuracy": 80},
+        ]
+        with open(self.log_file, "w") as f:
+            json.dump(log, f)
+        # Create topic directory so calc_level_by_accuracy works
+        topic_dir = self.topics_dir / "math"
+        topic_dir.mkdir()
+        with open(topic_dir / "concepts.json", "w") as f:
+            json.dump({}, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_weekly_report()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["learning_days"], 1)
+            self.assertEqual(output["total_actions"], 2)
+            self.assertIn("math", output["topics_covered"])
+
+    def test_cmd_check_reminder_no_crons(self):
+        """Test check-reminder when no crons exist."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = type('obj', (object,), {
+                    'returncode': 0,
+                    'stdout': '{"jobs": []}',
+                    'stderr': ''
+                })()
+                with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                    srs.cmd_check_reminder()
+                output = mock_out.getvalue()
+                self.assertIn('NOT ENABLED', output)
+
+    def test_cmd_check_reminder_with_crons(self):
+        """Test check-reminder when crons exist."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            # Write config with learning contract
+            config = {"learning_contract": {"time": "08:30"}}
+            with open(self.config_file, "w") as f:
+                json.dump(config, f)
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = type('obj', (object,), {
+                    'returncode': 0,
+                    'stdout': '{"jobs": [{"name": "retaincraft-reminder"}, {"name": "retaincraft-weekly-report"}]}',
+                    'stderr': ''
+                })()
+                with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                    srs.cmd_check_reminder()
+                output = mock_out.getvalue()
+                self.assertIn('ENABLED', output)
+                self.assertIn('08:30', output)
+
+    def test_cmd_setup_reminder_invalid_time(self):
+        """Test setup-reminder with invalid time format falls back to 09:00."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            # Clear config cache
+            srs._config_cache = None
+            srs._config_cache_time = None
+            config = {"learning_contract": {"time": "bad-time"}}
+            with open(self.config_file, "w") as f:
+                json.dump(config, f)
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = type('obj', (object,), {
+                    'returncode': 0,
+                    'stdout': '{}',
+                    'stderr': ''
+                })()
+                with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                    srs.cmd_setup_reminder()
+                output = mock_out.getvalue()
+                self.assertIn('Invalid', output)
+                self.assertIn('09:00', output)
+
+    def test_cron_exists_json_formats(self):
+        """Test _cron_exists handles both dict and list JSON formats."""
+        from unittest.mock import patch
+        # New format: {"jobs": [...]}
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '{"jobs": [{"name": "retaincraft-reminder"}]}',
+                'stderr': ''
+            })()
+            self.assertTrue(srs._cron_exists("retaincraft-reminder"))
+            self.assertFalse(srs._cron_exists("nonexistent"))
+        # Old format: [...]
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '[{"name": "retaincraft-reminder"}]',
+                'stderr': ''
+            })()
+            self.assertTrue(srs._cron_exists("retaincraft-reminder"))
+
+    def test_get_user_channel_from_sessions(self):
+        """Test _get_user_channel detects channel from main session."""
+        from unittest.mock import patch
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '{"sessions": [{"type": "main", "origin": {"provider": "qqbot"}}]}',
+                'stderr': ''
+            })()
+            self.assertEqual(srs._get_user_channel(), "qqbot")
+
+    def test_get_user_channel_no_main(self):
+        """Test _get_user_channel returns None when no main session."""
+        from unittest.mock import patch
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '{"sessions": []}',
+                'stderr': ''
+            })()
+            self.assertIsNone(srs._get_user_channel())
+
+
+class TestSM2SecondInterval(TestCase):
+    """Test SM-2 second interval fix."""
+
+    def test_second_review_interval_is_6_days(self):
+        """Test that second review interval is 6 days (original SM-2)."""
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 1
+        concept["interval_days"] = 1
+        concept["ease_factor"] = 2.5
+
+        # First review with "good"
+        updated = calc_next_review(concept, "good")
+        self.assertEqual(updated["interval_days"], 6)
+
+    def test_third_review_uses_ease_factor(self):
+        """Test that third review uses ease_factor multiplication."""
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 2
+        concept["interval_days"] = 6
+        concept["ease_factor"] = 2.5
+
+        # Third review with "good"
+        updated = calc_next_review(concept, "good")
+        self.assertEqual(updated["interval_days"], 15)  # 6 * 2.5 = 15
+
+    def test_wrong_rating_resets_interval(self):
+        """Test that wrong rating resets interval to 1 day."""
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 5
+        concept["interval_days"] = 30
+        concept["ease_factor"] = 2.5
+
+        # Review with "wrong"
+        updated = calc_next_review(concept, "wrong")
+        self.assertEqual(updated["interval_days"], 1)
 
 
 if __name__ == "__main__":

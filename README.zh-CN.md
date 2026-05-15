@@ -20,6 +20,9 @@
 - **5 种循证方法**整合在一个协议中：间隔重复（d=0.85）、主动回忆（d=0.74）、费曼学习法（d=0.54）、交错练习（d=0.47）、精细加工提问（d=0.56）——效果量均来自 [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) 元分析（242 项研究，16.9 万参与者）
 - **SM-2 间隔重复**：自动计算复习间隔，不是固定时间表
 - **摸底考试 + 模块测试**：学前学后对比，量化学习效果
+- **提醒系统**：每日学习计划 + 周报，通过 cron 定时触发，自动检测通知渠道
+- **学习契约**：基于实施意图理论（Gollwitzer 1999）的「如果 X 情况发生，我会做 Y 行动」格式
+- **遗忘风险提醒**：基于 Ebbinghaus 遗忘曲线分析，知识即将遗忘时主动警告
 - **倦怠检测**：连续答错自动降低难度或建议休息
 - **搜索优先策略**：AI 回答问题前先搜索验证，标注来源
 - **持久记忆**：学习数据跨会话保留
@@ -44,12 +47,28 @@ git clone https://github.com/kaixiad/RetainCraft.git ~/.openclaw/workspace/skill
 
 ## 使用方法
 
+### 快速开始
+
 告诉你的 AI：
 - "我想学线性代数"
 - "教我贝叶斯定理"
 - "帮我制定学习计划"
 
 AI 会自动启动完整的学习流程。
+
+### 首次学习设置
+
+1. **创建主题**：AI 执行 `srs.py init <topic>`
+2. **添加概念**：AI 发现并添加核心概念
+3. **设置提醒**：AI 执行 `srs.py setup-reminder` 创建每日学习提醒
+4. **签订学习契约**：AI 帮你制定「如果 X，那么 Y」的计划（Gollwitzer 1999）
+
+### 每日学习流程
+
+1. **查看到期复习**：`srs.py due` — 看今天该复习什么
+2. **复习 + 评分**：`srs.py review <topic>` — 交互式复习会话
+3. **模块测试**：定期测试，追踪等级进阶（L1→L5）
+4. **周报**：`srs.py weekly-report` — 回顾学习趋势
 
 ## 文件结构
 
@@ -70,7 +89,7 @@ retaincraft/
 │   └── docu-review-report.md   # 文档审查报告
 └── scripts/
     ├── srs.py                  # SM-2 间隔重复引擎 + 等级系统
-    ├── test_srs.py             # 单元测试（127 个用例）
+    ├── test_srs.py             # 单元测试（146 个用例）
     ├── scenarios.md            # 模拟场景库（7 个场景）
     ├── evidence.md             # 学术引用和效果量
     └── templates.md            # 输出格式模板
@@ -86,22 +105,44 @@ retaincraft/
 │   └── progress.md             # 掌握度追踪
 ├── test_history.json           # 模块测试历史
 ├── simulation_history.json     # 模拟历史
+├── learning_log.json           # 学习活动日志（v1.2.0 新增）
 └── config.json                 # 学习偏好配置
 ```
 
 ## CLI 命令
 
 ```bash
+# 核心命令
 python3 scripts/srs.py init <topic>              # 创建主题
 python3 scripts/srs.py add <topic> <concept>     # 添加概念
 python3 scripts/srs.py review <topic>            # 开始复习会话（交互式）
 python3 scripts/srs.py rate <topic> <concept> <rating>  # 评分概念（非交互式，给 AI 用）
 python3 scripts/srs.py due                       # 查看今日到期复习
 python3 scripts/srs.py status [topic]            # 查看整体 / 单主题状态
+
+# 测试命令
 python3 scripts/srs.py record-test <topic> <total> <correct>  # 记录模块测试结果
 python3 scripts/srs.py test-history [topic]      # 查看测试历史
 python3 scripts/srs.py record-simulation <topic> <scenario> <score> [--rounds N]  # 记录模拟结果
 python3 scripts/srs.py simulation-history [topic]  # 查看模拟历史
+
+# 画像命令
+python3 scripts/srs.py profile                   # 查看用户画像
+python3 scripts/srs.py profile --update          # 更新所有主题的画像
+python3 scripts/srs.py profile --compare <job>   # 对比画像与职位要求
+
+# 诊断命令
+python3 scripts/srs.py check-session [topic]     # 检查未记录的测试
+python3 scripts/srs.py check-burnout <topic>     # 分析倦怠风险
+
+# 提醒命令
+python3 scripts/srs.py setup-reminder            # 创建学习提醒和周报定时任务
+python3 scripts/srs.py reminder                  # 生成今日学习计划
+python3 scripts/srs.py weekly-report             # 生成周报数据
+python3 scripts/srs.py check-reminder            # 检查提醒状态
+python3 scripts/srs.py switch-channel            # 切换提醒通知渠道
+
+# 配置
 python3 scripts/srs.py config                    # 查看/设置配置
 ```
 
@@ -115,15 +156,29 @@ python3 scripts/srs.py config                    # 查看/设置配置
 | 费曼学习法 / 自我解释 | d=0.54 | Donoghue & Hattie 2021 |
 | 交错练习 | d=0.47 | Donoghue & Hattie 2021 |
 | AI 辅导 | 0.63-1.3 SD | [Kestin et al. 2025](https://doi.org/10.1038/s41598-025-97652-6)（哈佛 RCT，N=194） |
+| 实施意图 | — | [Gollwitzer 1999](https://doi.org/10.1037/0003-066X.54.7.493)（学习契约） |
+| 倦怠理论 | — | [Maslach & Leiter 2016](https://doi.org/10.1002/wps.20273)（倦怠检测） |
+| 拖延心理 | — | [Steel 2007](https://doi.org/10.1037/0033-2909.133.1.65)（遗忘风险） |
+| 遗忘曲线 | — | [Ebbinghaus 1885](https://doi.org/10.1371/journal.pone.0120644)（Murre & Dros 2015 验证） |
+| 自我效能感 | — | [Bandura 1997](https://en.wikipedia.org/wiki/Self-efficacy)（周报鼓励语） |
 
-> 所有 d 值均来自 Donoghue & Hattie (2021) 元分析（242 项研究，1,619 个效果量，169,179 名参与者）。Dunlosky et al. (2013) 使用定性分类（高/中/低效用），而非 Cohen's d。
+> 所有 d 值均来自 Donoghue & Hattie (2021) 元分析（242 项研究，1,619 个效果量，169,179 名参与者）。Dunlosky et al. (2013) 使用定性分类（高/中/低效用），而非 Cohen's d。所有引用均经过溯源验证，详见 [evidence.md](scripts/evidence.md)。
 
 ## 已知限制
 
 - **SM-2 算法**：经过验证但年代较久。FSRS（基于 ML 的现代替代方案）计划在未来版本中迁移。
 - **尚无用户验证数据**：学习方法基于循证研究，但本实现尚未在真实用户中大规模验证。
 - **费曼检验中的 AI 判断**：AI 评估你的解释是否正确，依赖底层 LLM 的准确性——关键知识请交叉验证权威来源。
-- **单语言界面**：CLI 输出和文档主要为中文，英文界面支持已列入计划。
+
+## 路线图
+
+| 版本 | 功能 | 状态 |
+|------|------|------|
+| v1.3.0 | FSRS 算法迁移（替代 SM-2） | 计划中 |
+| v1.3.0 | 英文界面支持 | 计划中 |
+| v1.3.0 | 学习数据分析命令 | 计划中 |
+
+详见 [CHANGELOG.md](CHANGELOG.md) 版本历史。
 
 ## 文档质量
 
@@ -135,8 +190,7 @@ python3 scripts/srs.py config                    # 查看/设置配置
 | 效果量数值准确 | ✅ |
 | 研究机构归属正确 | ✅ |
 | 协议逻辑一致 | ✅ |
-| 代码测试通过 | ✅ |
-| 需要定制 | ⚠️ 通用模板——请根据你的背景调整 |
+| 代码测试通过（146/146） | ✅ |
 
 完整审查报告：`docs/docu-review-report.md`
 
