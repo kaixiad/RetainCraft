@@ -139,8 +139,13 @@ python3 scripts/srs.py config                    # 查看/设置配置
 | 费曼学习法 / 自我解释 | d=0.54 | Donoghue & Hattie 2021 |
 | 交错练习 | d=0.47 | Donoghue & Hattie 2021 |
 | AI 辅导 | 0.63-1.3 SD | [Kestin et al. 2025](https://doi.org/10.1038/s41598-025-97652-6)（哈佛 RCT，N=194） |
+| 实施意图 | — | [Gollwitzer 1999](https://doi.org/10.1037/0003-066X.54.7.493)（学习契约） |
+| 倦怠理论 | — | [Maslach & Leiter 2016](https://doi.org/10.1002/wps.20273)（倦怠检测） |
+| 拖延心理 | — | [Steel 2007](https://doi.org/10.1037/0033-2909.133.1.65)（遗忘风险） |
+| 遗忘曲线 | — | [Ebbinghaus 1885](https://doi.org/10.1371/journal.pone.0120644)（Murre & Dros 2015 验证） |
+| 自我效能感 | — | [Bandura 1997](https://en.wikipedia.org/wiki/Self-efficacy)（周报鼓励语） |
 
-> 所有 d 值均来自 Donoghue & Hattie (2021) 元分析（242 项研究，1,619 个效果量，169,179 名参与者）。Dunlosky et al. (2013) 使用定性分类（高/中/低效用），而非 Cohen's d。
+> 所有 d 值均来自 Donoghue & Hattie (2021) 元分析（242 项研究，1,619 个效果量，169,179 名参与者）。Dunlosky et al. (2013) 使用定性分类（高/中/低效用），而非 Cohen's d。所有引用均经过溯源验证，详见 [evidence.md](scripts/evidence.md)。
 
 ## 已知限制
 

@@ -138,8 +138,13 @@ python3 scripts/srs.py config                    # View/set configuration
 | Self-Explanation / Feynman | d=0.54 | Donoghue & Hattie 2021 |
 | Interleaved Practice | d=0.47 | Donoghue & Hattie 2021 |
 | AI Tutoring | 0.63-1.3 SD | [Kestin et al. 2025](https://doi.org/10.1038/s41598-025-97652-6) (Harvard RCT, N=194) |
+| Implementation Intentions | — | [Gollwitzer 1999](https://doi.org/10.1037/0003-066X.54.7.493) (Learning Contract) |
+| Burnout Theory | — | [Maslach & Leiter 2016](https://doi.org/10.1002/wps.20273) (Burnout Detection) |
+| Procrastination | — | [Steel 2007](https://doi.org/10.1037/0033-2909.133.1.65) (Forgetting Risk) |
+| Forgetting Curve | — | [Ebbinghaus 1885](https://doi.org/10.1371/journal.pone.0120644) (Murre & Dros 2015 validation) |
+| Self-Efficacy | — | [Bandura 1997](https://en.wikipedia.org/wiki/Self-efficacy) (Weekly Report) |
 
-> All d values from Donoghue & Hattie (2021) meta-analysis (242 studies, 1,619 effect sizes, 169,179 participants). Dunlosky et al. (2013) uses qualitative classification (high/moderate/low utility), not Cohen's d.
+> All d values from Donoghue & Hattie (2021) meta-analysis (242 studies, 1,619 effect sizes, 169,179 participants). Dunlosky et al. (2013) uses qualitative classification (high/moderate/low utility), not Cohen's d. All citations verified in [evidence.md](scripts/evidence.md).
 
 ## Known Limitations
 
