@@ -752,18 +752,16 @@ def calc_level_by_accuracy(topic: str, concepts_fallback: dict[str, Any] | None 
 
     # --- Demotion check ---
     # Maintain thresholds: L2=0.2, L3=0.4, L4=0.7, L5=0.9
-    # If last 3 consecutive tests ALL below current level threshold, demote one level
+    # Demotion check: only demote ONE level per check (gradual degradation)
+    # SM-2 principle: incorrect answers reset interval but don't skip stages
+    # Ebbinghaus: forgetting is continuous, not stepwise
     maintain_thresholds = {2: level_thresholds["L2"], 3: level_thresholds["L3"], 4: level_thresholds["L4"], 5: level_thresholds["L5"]}
 
-    while level >= 3 and len(history) >= 3:
+    if level >= 3 and len(history) >= 3:
         threshold = maintain_thresholds[level]
         last3 = history[-3:]
         if all(h["accuracy"] < threshold for h in last3):
-            level -= 1  # demote one level
-            # After demotion, check if we need to demote further
-            # The while loop will continue checking with the new level threshold
-        else:
-            break
+            level -= 1  # demote one level only
 
     level_map = {
         "L1": ("L1", "入门 (Novice)", "[L1]"),
@@ -1526,7 +1524,7 @@ def _recreate_crons_with_channel(channel: str) -> None:
         "--name", "retaincraft-reminder",
         "--cron", f"0 {hour} * * *",
         "--tz", "Asia/Shanghai",
-        "--session", "main",
+        "--session", "isolated",
         "--channel", channel,
         "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} reminder",
         "--announce"
@@ -1580,7 +1578,7 @@ def cmd_setup_reminder() -> None:
             "--name", "retaincraft-reminder",
             "--cron", f"0 {hour} * * *",
             "--tz", "Asia/Shanghai",
-            "--session", "main",
+            "--session", "isolated",
             "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} reminder",
             "--announce"
         ]

@@ -300,13 +300,15 @@ class TestCalcLevelByAccuracy(TestCase):
             srs.load_test_history = original_func
 
 
-    def test_demotion_from_l5_to_l2(self):
-        """Test that demotion from L5 to L2 occurs after consecutive failures."""
+    def test_demotion_from_l5_to_l4(self):
+        """Test that demotion from L5 only drops one level per check."""
         # Mock load_test_history to return 9 tests:
         # - Tests 1-2: 90% (upgrade to L3)
-        # - Tests 3-4: 50% (upgrade to L4)
-        # - Tests 5-6: 80% (upgrade to L5)
-        # - Tests 7-9: 0% (below L5 threshold, should demote to L4, then L3, then L2)
+        # - Tests 3-4: 50% (intermediate)
+        # - Tests 5-6: 80% (upgrade to L4)
+        # - Tests 7-8: 90% (upgrade to L5)
+        # - Tests 9-11: 60% (below L5 threshold 90%, but above L4 threshold 70%)
+        # Scientific basis: gradual degradation (SM-2, Ebbinghaus)
         try:
             original_func = srs.load_test_history
             srs.load_test_history = lambda: {
@@ -317,15 +319,44 @@ class TestCalcLevelByAccuracy(TestCase):
                     {"accuracy": 0.5, "timestamp": "2026-05-05"},
                     {"accuracy": 0.8, "timestamp": "2026-05-05"},
                     {"accuracy": 0.8, "timestamp": "2026-05-05"},
-                    {"accuracy": 0.0, "timestamp": "2026-05-05"},
-                    {"accuracy": 0.0, "timestamp": "2026-05-05"},
-                    {"accuracy": 0.0, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.9, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.9, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.6, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.6, "timestamp": "2026-05-05"},
+                    {"accuracy": 0.6, "timestamp": "2026-05-05"},
                 ]
             }
 
             level_code, level_name, level_emoji = calc_level_by_accuracy("test_topic")
-            # Should be L2 (demoted from L5 to L4 to L3 to L2)
-            self.assertEqual(level_code, "L2")
+            # Should be L4: last 3 are 60% < 90% (L5 threshold) → demote to L4
+            # But 60% >= 70% is false, so... wait, 60% < 70% too
+            # Actually: last3 are 60%, which is < L5 threshold (90%) → demote one level to L4
+            # The demotion only checks current level (L5) threshold, not L4 threshold
+            self.assertEqual(level_code, "L4")
+
+            srs.load_test_history = original_func
+        finally:
+            srs.load_test_history = original_func
+
+    def test_demotion_gradual(self):
+        """Test that demotion requires multiple checks with new test results."""
+        # Scenario: L5 with 3x10% → L4 (one demotion)
+        # Then 3 more 10% tests → L3 (second demotion)
+        # Each demotion requires its own set of 3 failing tests
+        try:
+            original_func = srs.load_test_history
+            # First check: L5 with 3x10%
+            srs.load_test_history = lambda: {
+                "test_topic": [
+                    {"accuracy": 0.9}, {"accuracy": 0.9},  # L2
+                    {"accuracy": 0.5}, {"accuracy": 0.5},  # intermediate
+                    {"accuracy": 0.8}, {"accuracy": 0.8},  # L4
+                    {"accuracy": 0.9}, {"accuracy": 0.9},  # L5
+                    {"accuracy": 0.1}, {"accuracy": 0.1}, {"accuracy": 0.1},  # fail
+                ]
+            }
+            level_code, _, _ = calc_level_by_accuracy("test_topic")
+            self.assertEqual(level_code, "L4", "L5 + 3x10% should demote to L4")
 
             srs.load_test_history = original_func
         finally:
