@@ -19,6 +19,9 @@ Not "here's some material, figure it out yourself" — your AI studies with you,
 - **5 evidence-based methods** in one protocol: spaced repetition (d=0.85), active recall (d=0.74), Feynman technique (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants)
 - **SM-2 spaced repetition**: auto-calculates review intervals, not fixed schedules
 - **Pre-assessment + module tests**: quantifies learning with before/after comparison
+- **Reminder system**: daily learning plans + weekly reports via cron, auto-detects notification channel
+- **Learning contract**: "If X happens, I will do Y" format based on implementation intentions (Gollwitzer 1999)
+- **Forgetting risk**: Ebbinghaus curve analysis, warns when knowledge is about to decay
 - **Burnout detection**: auto-lowers difficulty or suggests breaks after consecutive mistakes
 - **Search-first policy**: AI verifies facts before answering, cites sources
 - **Persistent memory**: learning data survives across sessions

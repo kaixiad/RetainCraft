@@ -222,7 +222,8 @@ Evidence-based AI-assisted interactive learning protocol
 
 ### Promotion/Demotion Rules (升降级规则)
 - Promotion: 2 consecutive passes (升级：连续 2 次达标)
-- Demotion: 3 consecutive failures, min L2 (降级：连续 3 次不达标，最低降到 L2)
+- Demotion: 3 consecutive failures, one level per check, min L2 (降级：连续 3 次不达标，每次只降一级，最低 L2)
+- Gradual degradation: knowledge fades continuously, not in steps (渐进衰减：知识连续衰减，非阶梯式)
 
 ### Two Independent Dimensions (两个独立维度)
 - **Level (等级)** = Based on module test accuracy (权威)
