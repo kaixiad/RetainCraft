@@ -69,7 +69,7 @@ retaincraft/
 │   └── docu-review-report.md   # Documentation audit report
 └── scripts/
     ├── srs.py                  # SM-2 spaced repetition engine + level system
-    ├── test_srs.py             # Unit tests (127 test cases)
+    ├── test_srs.py             # Unit tests (133 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
     ├── evidence.md             # Academic citations and effect sizes
     └── templates.md            # Output format templates
@@ -91,16 +91,37 @@ retaincraft/
 ## CLI Commands
 
 ```bash
+# Core
 python3 scripts/srs.py init <topic>              # Create a topic
 python3 scripts/srs.py add <topic> <concept>     # Add a concept
 python3 scripts/srs.py review <topic>            # Start review session (interactive)
 python3 scripts/srs.py rate <topic> <concept> <rating>  # Rate concept (non-interactive, for AI)
 python3 scripts/srs.py due                       # Show today's due reviews
 python3 scripts/srs.py status [topic]            # Overview / single topic status
+
+# Testing
 python3 scripts/srs.py record-test <topic> <total> <correct>  # Record module test result
 python3 scripts/srs.py test-history [topic]      # View test history
 python3 scripts/srs.py record-simulation <topic> <scenario> <score> [--rounds N]  # Record simulation
 python3 scripts/srs.py simulation-history [topic]  # View simulation history
+
+# Profile
+python3 scripts/srs.py profile                   # Show user profile
+python3 scripts/srs.py profile --update          # Update profile for all topics
+python3 scripts/srs.py profile --compare <job>   # Compare profile with job requirements
+
+# Diagnostics
+python3 scripts/srs.py check-session [topic]     # Check for unrecorded tests
+python3 scripts/srs.py check-burnout <topic>     # Analyze burnout risk
+
+# Reminders
+python3 scripts/srs.py setup-reminder            # Setup learning reminder + weekly report cron
+python3 scripts/srs.py reminder                  # Generate today's learning plan
+python3 scripts/srs.py weekly-report             # Generate weekly report data
+python3 scripts/srs.py check-reminder            # Check reminder status
+python3 scripts/srs.py switch-channel            # Switch reminder notification channel
+
+# Config
 python3 scripts/srs.py config                    # View/set configuration
 ```
 

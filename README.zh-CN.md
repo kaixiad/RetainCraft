@@ -70,7 +70,7 @@ retaincraft/
 │   └── docu-review-report.md   # 文档审查报告
 └── scripts/
     ├── srs.py                  # SM-2 间隔重复引擎 + 等级系统
-    ├── test_srs.py             # 单元测试（127 个用例）
+    ├── test_srs.py             # 单元测试（133 个用例）
     ├── scenarios.md            # 模拟场景库（7 个场景）
     ├── evidence.md             # 学术引用和效果量
     └── templates.md            # 输出格式模板
@@ -92,16 +92,37 @@ retaincraft/
 ## CLI 命令
 
 ```bash
+# 核心命令
 python3 scripts/srs.py init <topic>              # 创建主题
 python3 scripts/srs.py add <topic> <concept>     # 添加概念
 python3 scripts/srs.py review <topic>            # 开始复习会话（交互式）
 python3 scripts/srs.py rate <topic> <concept> <rating>  # 评分概念（非交互式，给 AI 用）
 python3 scripts/srs.py due                       # 查看今日到期复习
 python3 scripts/srs.py status [topic]            # 查看整体 / 单主题状态
+
+# 测试命令
 python3 scripts/srs.py record-test <topic> <total> <correct>  # 记录模块测试结果
 python3 scripts/srs.py test-history [topic]      # 查看测试历史
 python3 scripts/srs.py record-simulation <topic> <scenario> <score> [--rounds N]  # 记录模拟结果
 python3 scripts/srs.py simulation-history [topic]  # 查看模拟历史
+
+# 画像命令
+python3 scripts/srs.py profile                   # 查看用户画像
+python3 scripts/srs.py profile --update          # 更新所有主题的画像
+python3 scripts/srs.py profile --compare <job>   # 对比画像与职位要求
+
+# 诊断命令
+python3 scripts/srs.py check-session [topic]     # 检查未记录的测试
+python3 scripts/srs.py check-burnout <topic>     # 分析倦怠风险
+
+# 提醒命令
+python3 scripts/srs.py setup-reminder            # 创建学习提醒和周报定时任务
+python3 scripts/srs.py reminder                  # 生成今日学习计划
+python3 scripts/srs.py weekly-report             # 生成周报数据
+python3 scripts/srs.py check-reminder            # 检查提醒状态
+python3 scripts/srs.py switch-channel            # 切换提醒通知渠道
+
+# 配置
 python3 scripts/srs.py config                    # 查看/设置配置
 ```
 
