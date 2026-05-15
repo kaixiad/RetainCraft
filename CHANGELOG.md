@@ -5,6 +5,76 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本控制](https://semver.org/lang/zh-CN/)。
 
+## [1.2.0] - 2026-05-15
+
+### 新增
+
+#### 提醒系统（5 个新命令）
+- `setup-reminder` — 创建学习提醒和周报 cron 任务，自动检测通知渠道
+- `reminder` — 生成今日学习计划，包含基于 Ebbinghaus 遗忘曲线的风险分析
+- `weekly-report` — 生成周报数据，包含掌握性经验和倦怠检测
+- `check-reminder` — 检查提醒和周报的启用状态
+- `switch-channel` — 交互式切换提醒通知渠道，自动重建 cron 任务
+
+#### 学习契约（Step 0.1）
+- 基于 Gollwitzer (1999) 实施意图理论
+- "如果 X 情况发生，我会做 Y 行动" 格式
+- 帮助用户制定具体、可执行的学习计划
+
+#### 遗忘风险提醒
+- 基于 Ebbinghaus (1885) 遗忘曲线（Murre & Dros 2015 验证）
+- 根据距离上次学习的天数，动态计算遗忘风险等级
+- 7 天未学习 → 知识基本回到起点
+
+#### 学习日志收集
+- 新增 `learning_log.json` 自动记录所有学习活动
+- 支持周报生成和学习趋势分析
+
+### 修复
+
+#### SM-2 第二次间隔修复
+- **问题**: 第二次复习间隔计算为 `1 × 2.5 = 2.5 天`（取整为 2 天）
+- **正确值**: 原始 SM-2 算法规定第二次间隔为 **6 天**（Wozniak, 1987）
+- **修复**: 第二次复习（`reviews==1`）时直接设为 6 天
+- **来源**: https://www.super-memory.com/english/ol/sm2.htm
+
+#### JSON 解析兼容性修复
+- `_cron_exists()` 和 `_get_user_channel()` 适配 OpenClaw 不同版本的 JSON 输出格式
+- 新版本返回 `{"jobs": [...]}` 结构，旧版本返回数组
+- 修复后新旧版本通用
+
+#### iterdir() 安全性修复
+- 修复 3 处 `TOPICS_DIR.iterdir()` 缺少 `ensure_dirs()` 调用
+- 影响命令: `cmd_reminder`、`profile --update`、`cmd_weekly_report`
+- 修复后新用户首次运行不再崩溃
+
+#### 代码质量改进
+- `cmd_setup_reminder` 添加 HH:MM 时间格式验证
+- `record-simulation` 现在记录到 `learning_log.json`，周报包含模拟数据
+- PEP 8 规范化：12 处顶层函数间空行修正
+
+### 新增学术引用（5 篇）
+
+| # | 引用 | 用途 |
+|---|------|------|
+| R7 | Gollwitzer (1999) — 实施意图理论 | 学习契约 |
+| R8 | Maslach & Leiter (2016) — 倦怠理论 | 懈怠响应策略 |
+| R9 | Steel (2007) — 拖延心理元分析 | 遗忘风险提醒 |
+| R10 | Ebbinghaus (1885) — 遗忘曲线 | 遗忘风险提醒 |
+| R11 | Bandura (1997) — 自我效能感 | 周报鼓励语 |
+
+所有引用均经过溯源验证，详见 `scripts/evidence.md`。
+
+### 文档更新
+
+- `CHANGELOG.md` — v1.2.0 完整变更日志
+- `README.md` / `README.zh-CN.md` — CLI 命令列表更新（11 → 18 个命令）
+- `SKILL.md` — 版本号更新，新增执行清单第 5-8 条，学习契约（Step 0.1）
+- `evidence.md` — 新增 5 篇引用的详细溯源信息
+- `docu-review-report.md` — 新增 R7-R11 溯源验证，SM-2 参数修正
+
+---
+
 ## [1.1.0] - 2026-05-13
 
 ### 新增
