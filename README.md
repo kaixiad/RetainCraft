@@ -69,7 +69,7 @@ retaincraft/
 │   └── docu-review-report.md   # Documentation audit report
 └── scripts/
     ├── srs.py                  # SM-2 spaced repetition engine + level system
-    ├── test_srs.py             # Unit tests (145 test cases)
+    ├── test_srs.py             # Unit tests (146 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
     ├── evidence.md             # Academic citations and effect sizes
     └── templates.md            # Output format templates

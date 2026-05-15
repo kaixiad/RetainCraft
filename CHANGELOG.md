@@ -48,6 +48,17 @@
 - 影响命令: `cmd_reminder`、`profile --update`、`cmd_weekly_report`
 - 修复后新用户首次运行不再崩溃
 
+#### setup-reminder 会话类型修复
+- **问题**: 每日提醒使用 `--session main` + `--message`，但 OpenClaw 对 main session 要求 `--system-event`
+- **修复**: 改为 `--session isolated` + `--announce`（与周报一致）
+- **影响**: 每日提醒 cron 创建失败或投递行为异常
+
+#### 降级逻辑修复（渐进降级）
+- **问题**: while 循环用同一组 3 次测试连续降多级（L5→L2）
+- **正确行为**: 每次检查只降一级，下次新测试结果再决定是否继续降
+- **科学依据**: SM-2 算法答错只重置 interval 不跳阶段；Ebbinghaus 遗忘曲线是连续函数
+- **修复**: while 循环改为单次 if 判断
+
 #### 代码质量改进
 - `cmd_setup_reminder` 添加 HH:MM 时间格式验证
 - `record-simulation` 现在记录到 `learning_log.json`，周报包含模拟数据

@@ -70,7 +70,7 @@ retaincraft/
 │   └── docu-review-report.md   # 文档审查报告
 └── scripts/
     ├── srs.py                  # SM-2 间隔重复引擎 + 等级系统
-    ├── test_srs.py             # 单元测试（145 个用例）
+    ├── test_srs.py             # 单元测试（146 个用例）
     ├── scenarios.md            # 模拟场景库（7 个场景）
     ├── evidence.md             # 学术引用和效果量
     └── templates.md            # 输出格式模板
