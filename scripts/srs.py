@@ -1558,8 +1558,7 @@ def cmd_setup_reminder() -> None:
     reminder_time = contract.get("time", "09:00")
 
     # Validate time format (HH:MM)
-    import re as _re
-    if not _re.match(r'^\d{2}:\d{2}$', reminder_time):
+    if not re.match(r'^\d{2}:\d{2}$', reminder_time):
         print(f"[WARN] Invalid reminder time format: '{reminder_time}'. Expected HH:MM (e.g., '09:00').")
         print("       Using default: 09:00")
         reminder_time = "09:00"

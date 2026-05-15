@@ -388,7 +388,7 @@ AI 助手收到心跳 → python3 scripts/srs.py due → 有到期内容 → 通
 
 ## 🎯 Multi-Topic Support (多主题支持)
 
-| Priority (优先级) | Description (描述) | Example (示例 |
+| Priority (优先级) | Description (描述) | Example (示例) |
 |-------------------|-------------------|---------------|
 | 1-Urgent (紧急) | Deadline approaching (截止日期临近) | Exam prep (考试准备) |
 | 2-Important (重要) | Core skills (核心技能) | Programming (编程语言) |

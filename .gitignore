@@ -21,3 +21,8 @@ Thumbs.db
 
 # Draft files (not ready for release)
 docs/draft-*
+
+# Internal reports (not for public release)
+docs/pre-release-audit-*
+docs/release-notes-*
+ROADMAP.md
