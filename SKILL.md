@@ -6,7 +6,7 @@ description: >
   Features pre-assessment, burnout detection, progress tracking, and system memory integration.
   基于循证学习科学的 AI 辅助互动学习协议，整合间隔重复、主动回忆、费曼学习法、
   交错练习和精细加工提问 5 种科学方法。
-version: 1.1.0
+version: 1.2.0
 author: kaixiad
 license: MIT
 homepage: https://github.com/kaixiad/RetainCraft
@@ -57,9 +57,12 @@ Evidence-based AI-assisted interactive learning protocol
 
 > Combines 5 scientifically validated methods + self-assessment + diagnostic test + customized learning path
 > 结合 5 种科学验证方法 + 自我评价 + 摸底考试 + 定制化学习路径
->
-> 📖 **Detailed workflow**: [references/full-workflow.md](references/full-workflow.md)
-> **详细流程说明**: [references/full-workflow.md](references/full-workflow.md)
+
+**📦 Source Code (源码)**: [https://github.com/kaixiad/RetainCraft](https://github.com/kaixiad/RetainCraft)
+**📖 Detailed workflow (详细流程)**: [references/full-workflow.md](references/full-workflow.md)
+
+> ⭐ If this skill helps you, please give a Star on GitHub!
+> 如果这个 skill 对你有帮助，欢迎在 GitHub 上给个 Star！
 
 ---
 
@@ -94,6 +97,28 @@ Evidence-based AI-assisted interactive learning protocol
    - Each upgrade requires 2 consecutive passes
    - 每次升级需要连续 2 次达标
 
+5. **First learning session must setup reminder (首次学习必须设置提醒)**:
+   ```bash
+   python3 scripts/srs.py setup-reminder
+   ```
+   Not executing = no scheduled reminders = learning interruption risk.
+   不执行 = 没有定时提醒 = 学习中断风险。
+
+6. **Manual reminder if not received (未收到提醒可手动执行)**:
+   ```bash
+   python3 scripts/srs.py reminder
+   ```
+
+7. **Check reminder status (检查提醒状态)**:
+   ```bash
+   python3 scripts/srs.py check-reminder
+   ```
+
+8. **Switch reminder channel (切换提醒渠道)**:
+   ```bash
+   python3 scripts/srs.py switch-channel
+   ```
+
 ---
 
 ## 📚 Core Methodology (核心方法论 - 循证)
@@ -118,6 +143,46 @@ Evidence-based AI-assisted interactive learning protocol
 ### Step 0: Learning Assessment (学习意愿评估)
 - User completes self-assessment questionnaire (主题、目标、水平、时间、偏好)
 - 用户完成自我评估问卷
+
+### Step 0.1: Learning Contract (学习契约)
+- Trigger: After Step 0, before Step 1
+- 触发时机：Step 0 完成后，Step 1 之前
+- AI generates a learning plan based on assessment
+- AI 助手根据评估生成学习计划
+- User can confirm, modify, or skip
+- 用户可以确认、修改或跳过
+
+**Output format (输出格式)**:
+```
+📅 学习时间
+- 每周学习天数：周一到周五（5 天）
+- 每天学习时间：晚上 8:00 - 9:00（1 小时）
+- 休息日：周六、周日（轻量复习）
+
+📚 学习节奏
+- 每个模块预计：3-5 天
+- 每天新概念：2-3 个
+- 每天复习：根据 SM-2 到期情况
+
+🎯 目标
+- 目标等级：L4 熟练
+- 预计总时长：30 小时
+- 预计完成日期：2026-06-15
+
+请确认以上计划，或告诉我需要调整的地方。
+你可以：
+1. 输入"确认"接受计划
+2. 输入"修改"调整学习时间
+3. 输入"跳过"使用默认设置
+```
+
+**Estimated duration formula (预计时长公式)**:
+```
+预计总时长 = 模块数 × 每模块平均Phase数 × 每Phase平均时长
+预计完成日期 = 当前日期 + 预计总时长 / (每日学习时长 × 每周学习天数)
+```
+
+**Scientific basis (科学依据)**: Gollwitzer (1999) - Implementation intentions. Specific plans increase execution rate by d=0.65.
 
 ### Step 0.5: Pre-study Materials (预习材料 - 零基础专用)
 - Trigger: user self-assesses as "complete beginner"
