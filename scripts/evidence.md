@@ -194,7 +194,7 @@ Wozniak, P. (1987). *Optimization of learning* (Master's thesis). University of 
 | 初始 EF | 2.5 | 2.5 | ✅ |
 | 最低 EF | 1.3 | 1.3 | ✅ |
 | 首次间隔 | 1 天 | 1 天 | ✅ |
-| 第二次间隔 | 6 天 | 未实现 | ⚠️ |
+| 第二次间隔 | 6 天 | 6 天 | ✅ (v1.2.0 修复) |
 | 后续间隔 | I(n-1) × EF | interval × EF | ✅ |
 | 评分体系 | 0-5 六级 | easy/good/hard/wrong 四级 | ⚠️ 适配 |
 | EF 更新公式 | 二次函数 | 线性简化 | ⚠️ |
@@ -266,10 +266,13 @@ Hong, K., Troynikov, A., & Huber, J. (2025, July 14). Context rot: How increasin
 | 元分析 (Meta-analysis) | 1 | Donoghue & Hattie 2021 |
 | 综述论文 (Review) | 1 | Dunlosky et al. 2013 |
 | 随机对照试验 (RCT) | 1 | Kestin et al. 2025 |
-| 理论论文 (Theory) | 1 | Ericsson et al. 1993 |
+| 理论论文 (Theory) | 2 | Ericsson et al. 1993, Gollwitzer 1999 |
 | arXiv 预印本 (arXiv Preprint) | 1 | Wang et al. 2024 (Tutor CoPilot) |
 | 研究报告 (Research Report) | 1 | Hong et al. 2025 |
 | 学位论文 (Thesis) | 1 | Wozniak 1987 |
+| 经典著作 (Classic Work) | 2 | Ebbinghaus 1885, Bandura 1997 |
+| 综述/元分析 (Review/Meta-analysis) | 1 | Steel 2007 |
+| 综述论文 (Review) | 1 | Maslach & Leiter 2016 |
 
 ### 引用质量评估
 
@@ -279,6 +282,11 @@ Hong, K., Troynikov, A., & Huber, J. (2025, July 14). Context rot: How increasin
 | Dunlosky et al. 2013 | ⭐⭐⭐⭐⭐ | 经典综述，高影响力期刊 |
 | Kestin et al. 2025 | ⭐⭐⭐⭐⭐ | 哈佛 RCT，Nature 旗下期刊 |
 | Ericsson et al. 1993 | ⭐⭐⭐⭐⭐ | 经典理论论文，高引用 |
+| Gollwitzer 1999 | ⭐⭐⭐⭐⭐ | 经典理论论文，American Psychologist |
+| Maslach & Leiter 2016 | ⭐⭐⭐⭐⭐ | 综述论文，World Psychiatry |
+| Steel 2007 | ⭐⭐⭐⭐⭐ | 元分析，Psychological Bulletin |
+| Ebbinghaus 1885 | ⭐⭐⭐⭐⭐ | 经典著作，2015年被复制验证 |
+| Bandura 1997 | ⭐⭐⭐⭐⭐ | 经典著作，自我效能感理论奠基之作 |
 | Wang et al. 2024 (Tutor CoPilot) | ⭐⭐⭐⭐ | arXiv 预印本，SREE/AEA 会议报告，被美国总统经济报告引用 |
 | Hong et al. 2025 | ⭐⭐⭐ | 研究报告，非同行评审 |
 | Wozniak 1987 | ⭐⭐⭐ | 学位论文，算法文档 |
@@ -290,6 +298,104 @@ Hong, K., Troynikov, A., & Huber, J. (2025, July 14). Context rot: How increasin
 3. **Wang et al. 2024 来源类型**：arXiv 预印本（非传统同行评审），但已在 SREE/AEA 学术会议报告，被 2025 年美国总统经济报告引用
 4. **Lost in the Middle 具体数字**：部分百分比数字缺乏精确出处
 5. **Ericsson 1993 效果量**：该论文是理论框架，不提供标准化效果量
+
+---
+
+## v1.2.0 新增引用
+
+### R7: Gollwitzer (1999)
+
+**完整引用**：
+Gollwitzer, P. M. (1999). Implementation intentions: Strong effects of simple plans. *American Psychologist*, 54(7), 493-503. https://doi.org/10.1037/0003-066X.54.7.493
+
+**来源**：
+- 期刊：American Psychologist（同行评审期刊）
+- DOI：10.1037/0003-066X.54.7.493
+- 发表日期：1999年7月
+
+**核心内容**：
+- 提出了"实施意图"（Implementation Intentions）理论
+- 具体计划比模糊意图的执行率高 d=0.65
+- 格式："如果 X 情况发生，我会做 Y 行动"
+
+**应用**：学习契约（Step 0.1）- 帮助用户制定具体的学习计划
+
+---
+
+### R8: Maslach & Leiter (2016)
+
+**完整引用**：
+Maslach, C., & Leiter, M. P. (2016). Understanding the burnout experience: Recent research and its implications for psychiatry. *World Psychiatry*, 15(2), 103-111. https://doi.org/10.1002/wps.20273
+
+**来源**：
+- 期刊：World Psychiatry（同行评审期刊）
+- DOI：10.1002/wps.20273
+- 发表日期：2016年6月
+
+**核心内容**：
+- 倦怠是持续压力导致的，需要主动干预
+- 倦怠的三个维度：情感耗竭、去人格化、个人成就感降低
+
+**应用**：懈怠响应策略 - 根据倦怠风险调整学习强度
+
+---
+
+### R9: Steel (2007)
+
+**完整引用**：
+Steel, P. (2007). The nature of procrastination: A meta-analytic and theoretical review of quintessential self-regulatory failure. *Psychological Bulletin*, 133(1), 65-94. https://doi.org/10.1037/0033-2909.133.1.65
+
+**来源**：
+- 期刊：Psychological Bulletin（同行评审期刊）
+- DOI：10.1037/0033-2909.133.1.65
+- 发表日期：2007年1月
+
+**核心内容**：
+- 拖延是普遍的自我调节失败
+- 约 20% 成年人和 50% 学生存在拖延问题
+
+**应用**：遗忘风险提醒 - 提醒用户避免拖延学习
+
+---
+
+### R10: Ebbinghaus (1885)
+
+**完整引用**：
+Ebbinghaus, H. (1885). *Über das Gedächtnis: Untersuchungen zur experimentellen Psychologie* [Memory: A contribution to experimental psychology]. Leipzig: Duncker & Humblot.
+
+**来源**：
+- 类型：经典著作
+- 发表日期：1885年
+- 现代验证：Murre, J. M. J., & Dros, J. (2015). Replication and analysis of Ebbinghaus' forgetting curve. *PLOS ONE*, 10(7), e0120644. https://doi.org/10.1371/journal.pone.0120644
+
+**核心数据**（遗忘曲线）：
+| 时间 | 遗忘率 | 保留率 |
+|------|--------|--------|
+| 20 分钟 | 42% | 58% |
+| 1 小时 | 56% | 44% |
+| 24 小时 | 67% | 33% |
+| 48 小时 | 72% | 28% |
+| 7 天 | 75% | 25% |
+
+**应用**：遗忘风险提醒 - 根据遗忘曲线提醒用户复习
+
+---
+
+### R11: Bandura (1997)
+
+**完整引用**：
+Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Freeman.
+
+**来源**：
+- 类型：书籍
+- 出版社：W. H. Freeman (Sage Publications)
+- 出版日期：1997年
+
+**核心内容**：
+- 自我效能感理论
+- 掌握性经验（mastery experiences）是建立自我效能感的最强途径
+
+**应用**：周报鼓励语 - 通过展示学习成果增强用户自我效能感
 
 ---
 
@@ -310,3 +416,13 @@ Hong, K., Troynikov, A., & Huber, J. (2025, July 14). Context rot: How increasin
 7. Wang, R. E., Ribeiro, A., Robinson, C., Loeb, S., & Demszky, D. (2024). Tutor CoPilot: A Human-AI approach for scaling real-time expertise. *arXiv preprint*, arXiv:2410.03017. https://arxiv.org/abs/2410.03017
 
 8. Wozniak, P. (1987). *Optimization of learning* (Master's thesis). University of Technology in Poznan, Poland.
+
+9. Gollwitzer, P. M. (1999). Implementation intentions: Strong effects of simple plans. *American Psychologist*, 54(7), 493-503. https://doi.org/10.1037/0003-066X.54.7.493
+
+10. Maslach, C., & Leiter, M. P. (2016). Understanding the burnout experience: Recent research and its implications for psychiatry. *World Psychiatry*, 15(2), 103-111. https://doi.org/10.1002/wps.20273
+
+11. Steel, P. (2007). The nature of procrastination: A meta-analytic and theoretical review of quintessential self-regulatory failure. *Psychological Bulletin*, 133(1), 65-94. https://doi.org/10.1037/0033-2909.133.1.65
+
+12. Ebbinghaus, H. (1885). *Über das Gedächtnis: Untersuchungen zur experimentellen Psychologie* [Memory: A contribution to experimental psychology]. Leipzig: Duncker & Humblot.
+
+13. Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Freeman.
