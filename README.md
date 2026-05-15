@@ -46,12 +46,28 @@ git clone https://github.com/kaixiad/RetainCraft.git ~/.openclaw/workspace/skill
 
 ## Usage
 
+### Quick Start
+
 Tell your AI:
 - "I want to learn linear algebra"
 - "Teach me Bayes' theorem"
 - "Help me make a study plan"
 
 The AI will automatically start the full learning workflow.
+
+### First Session Setup
+
+1. **Create a topic**: AI runs `srs.py init <topic>`
+2. **Add concepts**: AI discovers and adds key concepts
+3. **Setup reminders**: AI runs `srs.py setup-reminder` to create daily study reminders
+4. **Sign a learning contract**: AI helps you create "If X, then Y" plans (Gollwitzer 1999)
+
+### Daily Workflow
+
+1. **Check due reviews**: `srs.py due` — see what's due today
+2. **Review + rate**: `srs.py review <topic>` — interactive review session
+3. **Module test**: Periodic tests to track level progression (L1→L5)
+4. **Weekly report**: `srs.py weekly-report` — review your learning trends
 
 ## File Structure
 
@@ -152,7 +168,16 @@ python3 scripts/srs.py config                    # View/set configuration
 - **SM-2 algorithm**: This is a well-proven but decades-old algorithm. FSRS (a modern ML-based alternative) migration is planned for a future release.
 - **No user validation data yet**: The learning methods are evidence-based, but this specific implementation has not yet been validated with real users at scale.
 - **AI judgment in Feynman test**: The AI evaluates whether your explanation is correct. This relies on the underlying LLM's accuracy — cross-check critical knowledge with authoritative sources.
-- **Single-language interface**: CLI output and documentation are primarily in Chinese. English interface support is planned.
+
+## Roadmap
+
+| Version | Feature | Status |
+|---------|---------|--------|
+| v1.3.0 | FSRS algorithm migration (replace SM-2) | Planned |
+| v1.3.0 | English interface support | Planned |
+| v1.3.0 | Learning data analysis commands | Planned |
+
+See [CHANGELOG.md](CHANGELOG.md) for version history.
 
 ## Documentation Quality
 
@@ -164,8 +189,7 @@ This project underwent an independent documentation audit:
 | Effect size numbers accurate | ✅ |
 | Research institution attribution correct | ✅ |
 | Protocol logic consistent | ✅ |
-| Code tests passing | ✅ |
-| Needs customization | ⚠️ Generic template — adapt to your background |
+| Code tests passing (146/146) | ✅ |
 
 Full audit report: `docs/docu-review-report.md`
 
