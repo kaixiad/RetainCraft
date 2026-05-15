@@ -89,6 +89,7 @@ retaincraft/
 │   └── progress.md             # 掌握度追踪
 ├── test_history.json           # 模块测试历史
 ├── simulation_history.json     # 模拟历史
+├── learning_log.json           # 学习活动日志（v1.2.0 新增）
 └── config.json                 # 学习偏好配置
 ```
 

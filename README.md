@@ -88,6 +88,7 @@ retaincraft/
 │   └── progress.md             # Mastery tracking
 ├── test_history.json           # Module test history
 ├── simulation_history.json     # Simulation history
+├── learning_log.json           # Learning activity log (v1.2.0)
 └── config.json                 # Learning preferences
 ```
 
