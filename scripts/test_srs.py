@@ -2011,6 +2011,240 @@ class TestLearningLog(TestCase):
             srs.LEARNING_LOG_FILE = original_file
 
 
+class TestReminderCommands(TestCase):
+    """Test reminder-related commands (v1.2.0)."""
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.learn_dir = Path(self.tmpdir) / "learn"
+        self.learn_dir.mkdir(parents=True, exist_ok=True)
+        self.topics_dir = self.learn_dir / "topics"
+        self.topics_dir.mkdir(parents=True, exist_ok=True)
+        self.config_file = self.learn_dir / "config.json"
+        self.log_file = self.learn_dir / "learning_log.json"
+
+    def tearDown(self):
+        import shutil
+        shutil.rmtree(self.tmpdir, ignore_errors=True)
+
+    def _mock_paths(self):
+        """Return a context manager that patches srs paths."""
+        from unittest.mock import patch
+        return patch.multiple(
+            srs,
+            LEARN_DIR=self.learn_dir,
+            TOPICS_DIR=self.topics_dir,
+            CONFIG_FILE=self.config_file,
+            LEARNING_LOG_FILE=self.log_file,
+        )
+
+    def test_cmd_reminder_empty_topics(self):
+        """Test reminder command with no topics."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["total_due"], 0)
+            self.assertEqual(output["topics"], [])
+            self.assertIn("risk", output)
+            self.assertIn("risk_msg", output)
+
+    def test_cmd_reminder_with_due_concepts(self):
+        """Test reminder command with due concepts."""
+        from io import StringIO
+        from unittest.mock import patch
+        topic_dir = self.topics_dir / "test-topic"
+        topic_dir.mkdir()
+        concepts = {
+            "concept-a": {
+                "mastery": "learning",
+                "next_review": srs.today(),
+                "ease_factor": 2.5,
+                "interval_days": 1,
+                "reviews": 1,
+                "correct_count": 1,
+                "total_count": 1,
+                "level": "L1"
+            }
+        }
+        with open(topic_dir / "concepts.json", "w") as f:
+            json.dump(concepts, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["total_due"], 1)
+            self.assertEqual(output["topics"][0]["name"], "test-topic")
+
+    def test_cmd_reminder_risk_critical(self):
+        """Test reminder risk level when 7+ days since last learning."""
+        from io import StringIO
+        from unittest.mock import patch
+        # Write old learning log
+        old_time = (datetime.now() - timedelta(days=10)).isoformat()
+        log = [{"timestamp": old_time, "action": "rate", "topic": "test"}]
+        with open(self.log_file, "w") as f:
+            json.dump(log, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["risk"], "critical")
+
+    def test_cmd_reminder_risk_none(self):
+        """Test reminder risk level when learned today."""
+        from io import StringIO
+        from unittest.mock import patch
+        log = [{"timestamp": datetime.now().isoformat(), "action": "rate", "topic": "test"}]
+        with open(self.log_file, "w") as f:
+            json.dump(log, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_reminder()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["risk"], "none")
+
+    def test_cmd_weekly_report_empty_log(self):
+        """Test weekly report with empty learning log."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_weekly_report()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["learning_days"], 0)
+            self.assertEqual(output["total_actions"], 0)
+            self.assertEqual(output["topics_covered"], [])
+
+    def test_cmd_weekly_report_with_entries(self):
+        """Test weekly report with recent learning entries."""
+        from io import StringIO
+        from unittest.mock import patch
+        log = [
+            {"timestamp": datetime.now().isoformat(), "action": "rate", "topic": "math"},
+            {"timestamp": datetime.now().isoformat(), "action": "record-test", "topic": "math", "accuracy": 80},
+        ]
+        with open(self.log_file, "w") as f:
+            json.dump(log, f)
+        # Create topic directory so calc_level_by_accuracy works
+        topic_dir = self.topics_dir / "math"
+        topic_dir.mkdir()
+        with open(topic_dir / "concepts.json", "w") as f:
+            json.dump({}, f)
+        with self._mock_paths():
+            with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                srs.cmd_weekly_report()
+            output = json.loads(mock_out.getvalue())
+            self.assertEqual(output["learning_days"], 1)
+            self.assertEqual(output["total_actions"], 2)
+            self.assertIn("math", output["topics_covered"])
+
+    def test_cmd_check_reminder_no_crons(self):
+        """Test check-reminder when no crons exist."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = type('obj', (object,), {
+                    'returncode': 0,
+                    'stdout': '{"jobs": []}',
+                    'stderr': ''
+                })()
+                with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                    srs.cmd_check_reminder()
+                output = mock_out.getvalue()
+                self.assertIn('NOT ENABLED', output)
+
+    def test_cmd_check_reminder_with_crons(self):
+        """Test check-reminder when crons exist."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            # Write config with learning contract
+            config = {"learning_contract": {"time": "08:30"}}
+            with open(self.config_file, "w") as f:
+                json.dump(config, f)
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = type('obj', (object,), {
+                    'returncode': 0,
+                    'stdout': '{"jobs": [{"name": "retaincraft-reminder"}, {"name": "retaincraft-weekly-report"}]}',
+                    'stderr': ''
+                })()
+                with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                    srs.cmd_check_reminder()
+                output = mock_out.getvalue()
+                self.assertIn('ENABLED', output)
+                self.assertIn('08:30', output)
+
+    def test_cmd_setup_reminder_invalid_time(self):
+        """Test setup-reminder with invalid time format falls back to 09:00."""
+        from io import StringIO
+        from unittest.mock import patch
+        with self._mock_paths():
+            # Clear config cache
+            srs._config_cache = None
+            srs._config_cache_time = None
+            config = {"learning_contract": {"time": "bad-time"}}
+            with open(self.config_file, "w") as f:
+                json.dump(config, f)
+            with patch('subprocess.run') as mock_run:
+                mock_run.return_value = type('obj', (object,), {
+                    'returncode': 0,
+                    'stdout': '{}',
+                    'stderr': ''
+                })()
+                with patch('sys.stdout', new_callable=StringIO) as mock_out:
+                    srs.cmd_setup_reminder()
+                output = mock_out.getvalue()
+                self.assertIn('Invalid', output)
+                self.assertIn('09:00', output)
+
+    def test_cron_exists_json_formats(self):
+        """Test _cron_exists handles both dict and list JSON formats."""
+        from unittest.mock import patch
+        # New format: {"jobs": [...]}
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '{"jobs": [{"name": "retaincraft-reminder"}]}',
+                'stderr': ''
+            })()
+            self.assertTrue(srs._cron_exists("retaincraft-reminder"))
+            self.assertFalse(srs._cron_exists("nonexistent"))
+        # Old format: [...]
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '[{"name": "retaincraft-reminder"}]',
+                'stderr': ''
+            })()
+            self.assertTrue(srs._cron_exists("retaincraft-reminder"))
+
+    def test_get_user_channel_from_sessions(self):
+        """Test _get_user_channel detects channel from main session."""
+        from unittest.mock import patch
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '{"sessions": [{"type": "main", "origin": {"provider": "qqbot"}}]}',
+                'stderr': ''
+            })()
+            self.assertEqual(srs._get_user_channel(), "qqbot")
+
+    def test_get_user_channel_no_main(self):
+        """Test _get_user_channel returns None when no main session."""
+        from unittest.mock import patch
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '{"sessions": []}',
+                'stderr': ''
+            })()
+            self.assertIsNone(srs._get_user_channel())
+
+
 class TestSM2SecondInterval(TestCase):
     """Test SM-2 second interval fix."""
 
