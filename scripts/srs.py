@@ -973,7 +973,13 @@ def _calc_next_review_fsrs(c: dict[str, Any], rating: str) -> dict[str, Any]:
     else:
         d = c["difficulty"]
         s = c["stability"]
-        r = c.get("retrievability", 0.9)
+        # Use R=0.9 (target retention) for stability update, not stored R.
+        # After review, R is reset to 1.0, but the stability formula needs
+        # the R value BEFORE the review (i.e., at recall time).
+        # Default 0.9 matches the FSRS design: R(S, S) = 0.9.
+        # When interval_days > 0, we can estimate elapsed time, but
+        # for simplicity we use the target retention as approximation.
+        r = 0.9
 
         try:
             # Update difficulty
