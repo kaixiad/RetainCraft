@@ -24,6 +24,8 @@ docs/draft-*
 
 # Internal reports (not for public release)
 docs/pre-release-audit-*
+docs/*-audit-report.md
+docs/docu-review-report.md
 docs/release-notes-*
 docs/clawhub-strategy.md
 docs/clawhub-publish-guide.md

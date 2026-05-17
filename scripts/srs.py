@@ -26,6 +26,12 @@ Usage:
     python3 srs.py weekly-report              # Generate weekly report data
     python3 srs.py check-reminder             # Check reminder status
     python3 srs.py switch-channel             # Switch reminder notification channel
+    python3 srs.py today                     # Today's learning plan with overdue analysis
+    python3 srs.py streak                    # Show consecutive learning days
+    python3 srs.py analyze                   # Learning trends and weak concepts
+
+    # v1.3.0 new
+    python3 srs.py config set algorithm fsrs # Switch to FSRS-5 algorithm
 
 Storage: ~/learn/
 """
