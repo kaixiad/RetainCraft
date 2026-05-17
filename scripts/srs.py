@@ -961,6 +961,31 @@ def today() -> str:
 RATING_TO_INT = {"wrong": 1, "hard": 2, "good": 3, "easy": 4}
 
 
+def _compute_r_at_recall(c: dict[str, Any], s: float) -> float:
+    """
+    Compute exact retrievability R at recall time from elapsed days.
+
+    Design intent: Use the forgetting curve R(t, S) = (1 + FACTOR*t/S)^DECAY
+    where t = days since last review. Derived from concept's next_review
+    and interval_days. Falls back to 0.9 if data is missing.
+    """
+    try:
+        next_review = c.get("next_review")
+        interval_days = c.get("interval_days", 0)
+        if not next_review or interval_days <= 0:
+            return 0.9  # Fallback for first review or missing data
+        # last_review_date = next_review - interval_days
+        review_date = datetime.strptime(next_review, "%Y-%m-%d")
+        last_review = review_date - timedelta(days=interval_days)
+        elapsed = (datetime.now() - last_review).days
+        if elapsed <= 0:
+            elapsed = 1  # Minimum 1 day
+        r = (1 + FSRS_FACTOR * elapsed / s) ** FSRS_DECAY
+        return max(FSRS_R_MIN, min(FSRS_R_MAX, r))
+    except (ValueError, OSError, OverflowError):
+        return 0.9  # Safe fallback
+
+
 def _calc_next_review_fsrs(c: dict[str, Any], rating: str) -> dict[str, Any]:
     """
     FSRS-5 scheduling: update difficulty, stability, retrievability.
@@ -979,13 +1004,12 @@ def _calc_next_review_fsrs(c: dict[str, Any], rating: str) -> dict[str, Any]:
     else:
         d = c["difficulty"]
         s = c["stability"]
-        # Use R=0.9 (target retention) for stability update, not stored R.
-        # After review, R is reset to 1.0, but the stability formula needs
-        # the R value BEFORE the review (i.e., at recall time).
-        # Default 0.9 matches the FSRS design: R(S, S) = 0.9.
-        # When interval_days > 0, we can estimate elapsed time, but
-        # for simplicity we use the target retention as approximation.
-        r = 0.9
+        # Compute exact R from elapsed time since last review.
+        # R(t, S) = (1 + FACTOR * t / S)^DECAY where t = days since last review.
+        # We derive t from next_review (scheduled date) and interval_days:
+        #   last_review_date = next_review - interval_days
+        #   elapsed = today - last_review_date
+        r = _compute_r_at_recall(c, s)
 
         try:
             # Update difficulty
@@ -1693,6 +1717,7 @@ def cmd_analyze(args: list[str]) -> None:
     Design intent: Data-driven analysis using test_history and learning_log.
     Shows actionable insights, not just raw data.
     """
+    ensure_dirs()
     history = load_test_history()
     log = load_learning_log()
 
