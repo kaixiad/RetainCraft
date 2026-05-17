@@ -87,8 +87,8 @@ retaincraft/
 ├── docs/
 │   └── docu-review-report.md   # Documentation audit report
 └── scripts/
-    ├── srs.py                  # SM-2 spaced repetition engine + level system
-    ├── test_srs.py             # Unit tests (158 test cases)
+    ├── srs.py                  # SM-2 + FSRS-5 spaced repetition engine + level system
+    ├── test_srs.py             # Unit tests (159 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
     ├── evidence.md             # Academic citations and effect sizes
     └── templates.md            # Output format templates
@@ -171,7 +171,6 @@ python3 scripts/srs.py analyze                   # Learning trends and weak conc
 
 ## Known Limitations
 
-- **SM-2 algorithm**: This is a well-proven but decades-old algorithm. FSRS (a modern ML-based alternative) migration is planned for a future release.
 - **No user validation data yet**: The learning methods are evidence-based, but this specific implementation has not yet been validated with real users at scale.
 - **AI judgment in Feynman test**: The AI evaluates whether your explanation is correct. This relies on the underlying LLM's accuracy — cross-check critical knowledge with authoritative sources.
 
@@ -179,9 +178,10 @@ python3 scripts/srs.py analyze                   # Learning trends and weak conc
 
 | Version | Feature | Status |
 |---------|---------|--------|
-| v1.3.0 | FSRS algorithm migration (replace SM-2) | Planned |
-| v1.3.0 | English interface support | Planned |
-| v1.3.0 | Learning data analysis commands | Planned |
+| v1.3.0 | FSRS-5 algorithm (IEEE TKDE 2023) + SM-2 dual support | ✅ Done |
+| v1.3.0 | Learning data analysis commands (today/streak/analyze) | ✅ Done |
+| v1.4.0 | Cross-platform reminder system | Planned |
+| v1.5.0 | Learning video search + AI hallucination defense | Planned |
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
@@ -195,7 +195,7 @@ This project underwent an independent documentation audit:
 | Effect size numbers accurate | ✅ |
 | Research institution attribution correct | ✅ |
 | Protocol logic consistent | ✅ |
-| Code tests passing (158/158) | ✅ |
+| Code tests passing (159/159) | ✅ |
 
 Full audit report: `docs/docu-review-report.md`
 

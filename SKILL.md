@@ -69,7 +69,7 @@ Evidence-based AI-assisted interactive learning protocol
 
 **📦 Source Code (源码)**: [https://github.com/kaixiad/RetainCraft](https://github.com/kaixiad/RetainCraft)
 
-> **RetainCraft** by [kaixiad](https://github.com/kaixiad) — 146 unit tests, 11 academic citations, zero dependencies.
+> **RetainCraft** by [kaixiad](https://github.com/kaixiad) — 159 unit tests, 15 academic citations, zero dependencies.
 > If you find this useful, a ⭐ on GitHub would mean a lot.
 **📖 Detailed workflow (详细流程)**: [references/full-workflow.md](references/full-workflow.md)
 
