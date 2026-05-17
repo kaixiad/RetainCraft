@@ -1717,6 +1717,8 @@ def cmd_streak(args: list[str]) -> None:
     print(f"  Total active days: {len(dates)}")
     if dates:
         print(f"  Last activity: {dates[0]}")
+    if streak == 0 and dates:
+        print(f"\n  [TIP] Streak counts from today. Study today to keep it going!")
 
     if streak >= 7:
         print(f"\n  [GREAT] 7+ day streak! Consistency is the key to mastery.")
