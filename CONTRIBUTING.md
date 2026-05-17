@@ -72,10 +72,9 @@ retaincraft/
 │   ├── ISSUE_TEMPLATE/         # Issue 模板
 │   └── pull_request_template.md # PR 模板
 ├── docs/
-│   └── docu-review-report.md   # 文档审查报告
 └── scripts/
-    ├── srs.py                  # SM-2 间隔重复脚本
-    ├── test_srs.py             # 单元测试（127 个用例）
+    ├── srs.py                  # SM-2 + FSRS-5 间隔重复引擎
+    ├── test_srs.py             # 单元测试（159 个用例）
     ├── scenarios.md            # 场景库示例
     ├── evidence.md             # 学术引用和效果量
     └── templates.md            # 输出格式模板

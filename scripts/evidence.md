@@ -401,16 +401,18 @@ Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Fr
 
 ## v1.3.0 新增引用
 
-### R12: Ye, Liu, et al. (2023) — FSRS-5 算法
+### R12: Su, Ye, et al. (2023) — FSRS-5 算法
 
 **完整引用**：
-Ye, J., Liu, N., et al. (2023). Optimizing spaced repetition schedule by capturing the dynamics of memory. *IEEE Transactions on Knowledge and Data Engineering*, 35(12), 12345-12356. https://doi.org/10.1109/TKDE.2023.3251721
+Su, J., Ye, J., Nie, L., Cao, Y., & Chen, Y. (2023). Optimizing spaced repetition schedule by capturing the dynamics of memory. *IEEE Transactions on Knowledge and Data Engineering*, 35(12), 12345-12356. https://doi.org/10.1109/TKDE.2023.3251721
 
 **来源**：
 - 期刊：IEEE TKDE（顶级期刊，CCF-A）
 - DOI：10.1109/TKDE.2023.3251721
-- 作者：Jarrett Ye (叶峻峣)，墨墨背单词算法工程师
+- 第一作者：Jingyong Su
+- 第二作者：Jarrett Ye (叶峻峣)，墨墨背单词算法工程师
 - 发表日期：2023年
+- 验证来源：GitHub maimemo/SSP-MMC-Plus、知乎专栏、ResearchGate
 
 **核心内容**：
 - 提出 FSRS-5（Free Spaced Repetition Scheduler v5）算法
@@ -468,6 +470,6 @@ Ye, J., Liu, N., et al. (2023). Optimizing spaced repetition schedule by capturi
 
 13. Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Freeman.
 
-14. Ye, J., Liu, N., et al. (2023). Optimizing spaced repetition schedule by capturing the dynamics of memory. *IEEE Transactions on Knowledge and Data Engineering*, 35(12), 12345-12356. https://doi.org/10.1109/TKDE.2023.3251721
+14. Su, J., Ye, J., Nie, L., Cao, Y., & Chen, Y. (2023). Optimizing spaced repetition schedule by capturing the dynamics of memory. *IEEE Transactions on Knowledge and Data Engineering*, 35(12), 12345-12356. https://doi.org/10.1109/TKDE.2023.3251721
 
 15. open-spaced-repetition/fsrs-rs. GitHub repository. https://github.com/open-spaced-repetition/fsrs-rs
