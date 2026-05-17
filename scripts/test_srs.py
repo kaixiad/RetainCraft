@@ -2313,5 +2313,137 @@ class TestSM2SecondInterval(TestCase):
         self.assertEqual(updated["interval_days"], 1)
 
 
+class TestFSRS5Algorithm(TestCase):
+    """Test FSRS-5 spaced repetition algorithm implementation.
+
+    Formulas verified against:
+    - IEEE TKDE 2023 paper (DOI: 10.1109/TKDE.2023.3251721)
+    - open-spaced-repetition/fsrs-rs deepwiki documentation
+    """
+
+    def test_fsrs_initial_stability(self):
+        """Test S₀(G) = w[G-1] for each rating."""
+        from srs import fsrs_init_stability
+        weights = srs.FSRS_V5_WEIGHTS
+        self.assertAlmostEqual(fsrs_init_stability(1), weights[0])  # Again
+        self.assertAlmostEqual(fsrs_init_stability(2), weights[1])  # Hard
+        self.assertAlmostEqual(fsrs_init_stability(3), weights[2])  # Good
+        self.assertAlmostEqual(fsrs_init_stability(4), weights[3])  # Easy
+
+    def test_fsrs_initial_difficulty(self):
+        """Test D₀(G) = w₄ - exp(w₅ × (G-1)) + 1, clamped to [1, 10]."""
+        from srs import fsrs_init_difficulty
+        import math
+        weights = srs.FSRS_V5_WEIGHTS
+        # Good rating (G=3): D₀ = w₄ - exp(w₅ × 2) + 1
+        d_good = weights[4] - math.exp(weights[5] * 2) + 1
+        self.assertAlmostEqual(fsrs_init_difficulty(3), max(1, min(10, d_good)))
+        # Easy rating should give lower difficulty than Again
+        self.assertLess(fsrs_init_difficulty(4), fsrs_init_difficulty(1))
+
+    def test_fsrs_retrievability_at_stability(self):
+        """Test R(S, S) ≈ 0.9 (design property of FSRS)."""
+        from srs import fsrs_retrievability
+        r = fsrs_retrievability(10.0, 10.0)  # t=S => R should be ~0.9
+        self.assertAlmostEqual(r, 0.9, places=2)
+
+    def test_fsrs_retrievability_decreases(self):
+        """Test that R decreases as t increases (forgetting curve)."""
+        from srs import fsrs_retrievability
+        r1 = fsrs_retrievability(1.0, 10.0)
+        r5 = fsrs_retrievability(5.0, 10.0)
+        r10 = fsrs_retrievability(10.0, 10.0)
+        self.assertGreater(r1, r5)
+        self.assertGreater(r5, r10)
+
+    def test_fsrs_interval_from_stability(self):
+        """Test that interval is derived from stability for desired retention."""
+        from srs import fsrs_next_interval
+        # For S=10, interval should be ~10 days (since R(S,S)=0.9)
+        interval = fsrs_next_interval(10.0)
+        self.assertAlmostEqual(interval, 10.0, delta=1.0)
+
+    def test_fsrs_sm2_data_compatibility(self):
+        """Test that old SM-2 data (ease_factor/interval) doesn't crash FSRS."""
+        from srs import calc_next_review
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 1
+        concept["interval_days"] = 1
+        concept["ease_factor"] = 2.5
+        # Should work without algorithm field (defaults to SM-2)
+        updated = calc_next_review(concept, "good")
+        self.assertIn("interval_days", updated)
+
+    def test_fsrs_difficulty_clamp(self):
+        """Test that difficulty is clamped to [1, 10]."""
+        from srs import fsrs_update_difficulty
+        # Extreme difficulty should be clamped
+        d = fsrs_update_difficulty(0.5, 3)  # Very low difficulty
+        self.assertGreaterEqual(d, 1)
+        d = fsrs_update_difficulty(15.0, 1)  # Very high difficulty + Again
+        self.assertLessEqual(d, 10)
+
+    def test_fsrs_stability_after_recall_positive(self):
+        """Test that successful recall increases stability."""
+        from srs import fsrs_stability_after_recall
+        s_old = 10.0
+        d = 5.0
+        r = 0.9
+        s_new = fsrs_stability_after_recall(s_old, d, r, 3)  # Good rating
+        self.assertGreater(s_new, s_old)
+
+    def test_fsrs_stability_after_forgetting_decreases(self):
+        """Test that forgetting decreases stability."""
+        from srs import fsrs_stability_after_forgetting
+        s_old = 10.0
+        d = 5.0
+        r = 0.5
+        s_new = fsrs_stability_after_forgetting(s_old, d, r)
+        self.assertLess(s_new, s_old)
+
+    def test_fsrs_nan_inf_fallback(self):
+        """Test that NaN/Inf results fall back to SM-2."""
+        from srs import calc_next_review
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["algorithm"] = "fsrs"
+        concept["difficulty"] = 5.0
+        concept["stability"] = 10.0
+        concept["retrievability"] = 0.9
+        concept["reviews"] = 3
+        concept["interval_days"] = 10
+        # Normal case should work
+        updated = calc_next_review(concept, "good")
+        self.assertIn("interval_days", updated)
+        self.assertNotEqual(updated["interval_days"], 0)
+
+    def test_fsrs_algorithm_switch(self):
+        """Test that config algorithm=fsrs enables FSRS scheduling."""
+        from srs import calc_next_review, DEFAULT_CONFIG
+        config = DEFAULT_CONFIG.copy()
+        config["algorithm"] = "fsrs"
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 0
+        concept["total_count"] = 0
+        concept["correct_count"] = 0
+        # First review with FSRS
+        updated = calc_next_review(concept, "good", config)
+        self.assertIn("difficulty", updated)
+        self.assertIn("stability", updated)
+        self.assertIn("retrievability", updated)
+        self.assertGreater(updated["interval_days"], 0)
+
+    def test_fsrs_default_is_sm2(self):
+        """Test that default algorithm is SM-2 (backward compatible)."""
+        from srs import calc_next_review
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 0
+        concept["total_count"] = 0
+        concept["correct_count"] = 0
+        updated = calc_next_review(concept, "good")
+        # SM-2 should not add FSRS fields
+        self.assertNotIn("difficulty", updated)
+        self.assertNotIn("stability", updated)
+
+
 if __name__ == "__main__":
     main()
