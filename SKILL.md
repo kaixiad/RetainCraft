@@ -34,7 +34,6 @@ tags:
   - forgetting-curve
   - burnout-detection
   - weekly-report
-  - burnout-detection
   - openclaw
   - 学习
   - 教育
