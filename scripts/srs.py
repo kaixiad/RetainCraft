@@ -112,6 +112,9 @@ LEARNING_LOG_FILE = LEARN_DIR / "learning_log.json"
 # For cron detection (used by setup-reminder)
 SCRIPTS_DIR = Path(__file__).parent
 
+# SM-2 algorithm constant: second review interval (original SM-2 specification)
+SM2_SECOND_INTERVAL = 6
+
 DEFAULT_CONFIG = {
     "learning_depth": "standard",
     "learner_type": "practical",
@@ -988,7 +991,7 @@ def calc_next_review(concept: dict[str, Any], rating: str, config: dict[str, Any
     elif rating == "good":
         # SM-2 fix: second review should be 6 days (original SM-2 algorithm)
         if is_second_review:
-            c["interval_days"] = 6
+            c["interval_days"] = SM2_SECOND_INTERVAL
         else:
             c["interval_days"] = max(1, int(c["interval_days"] * c["ease_factor"]))
         # ease_factor unchanged
@@ -996,7 +999,7 @@ def calc_next_review(concept: dict[str, Any], rating: str, config: dict[str, Any
     elif rating == "easy":
         # SM-2 fix: second review should be 6 days (original SM-2 algorithm)
         if is_second_review:
-            c["interval_days"] = 6
+            c["interval_days"] = SM2_SECOND_INTERVAL
         else:
             c["interval_days"] = max(1, int(c["interval_days"] * (c["ease_factor"] + 0.15)))
         c["ease_factor"] = c["ease_factor"] + 0.15
