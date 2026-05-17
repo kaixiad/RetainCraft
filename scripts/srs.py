@@ -1793,7 +1793,13 @@ def cmd_optimize_params(args: list[str]) -> None:
     minimize binary cross-entropy loss between predicted R and actual recall.
     Pure Python implementation, zero external dependencies.
 
-    Requires at least 100 different-day reviews across all topics.
+    Best practices (from FSRS community):
+    - Minimum 1,000 reviews for meaningful optimization
+    - Optimize every 2-3 months, not more frequently
+    - Check rating distribution — >95% same rating = bad signal
+    - New parameters need 2 weeks to evaluate
+    - Parameters drastically different from defaults = anomaly warning
+
     Saves optimized weights to config.json under 'fsrs_weights' key.
     """
     import math
@@ -1801,14 +1807,29 @@ def cmd_optimize_params(args: list[str]) -> None:
 
     # Collect rate actions (review events)
     rate_actions = [e for e in log if e["action"] == "rate"]
-    if len(rate_actions) < 100:
-        print(f"\n[OPTIMIZE] Need at least 100 reviews for optimization.")
+    if len(rate_actions) < 1000:
+        print(f"\n[OPTIMIZE] Need at least 1,000 reviews for meaningful optimization.")
         print(f"  Current: {len(rate_actions)} reviews")
-        print(f"  Keep learning and come back later!")
+        print(f"  FSRS community recommends 1,000+ to avoid overfitting.")
+        print(f"  Keep learning and come back after more reviews!")
         return
+
+    # Check rating distribution — >95% same rating is a pitfall
+    rating_counts: dict[str, int] = {}
+    for entry in rate_actions:
+        r = entry.get("details", {}).get("rating", "unknown")
+        rating_counts[r] = rating_counts.get(r, 0) + 1
+    total = len(rate_actions)
+    for r, count in rating_counts.items():
+        if count / total > 0.95:
+            print(f"\n[OPTIMIZE] Warning: {count/total:.0%} of ratings are '{r}'.")
+            print(f"  The optimizer needs diverse ratings to learn your patterns.")
+            print(f"  Try using 'hard' and 'wrong' more often when appropriate.")
+            return
 
     print(f"\n[OPTIMIZE] Optimizing FSRS-5 parameters...")
     print(f"  Reviews: {len(rate_actions)}")
+    print(f"  Rating distribution: {rating_counts}")
 
     # Group by topic+concept to build review histories
     histories: dict[str, list[dict]] = {}
@@ -1927,11 +1948,23 @@ def cmd_optimize_params(args: list[str]) -> None:
     config = load_config(use_cache=False)
     config["fsrs_weights"] = best_weights
     save_config(config)
+
+    # Check parameter drift (FSRS community best practice)
+    max_drift = 0.0
+    for i in range(15):
+        if FSRS_V5_WEIGHTS_DEFAULT[i] > 0:
+            drift = abs(best_weights[i] - FSRS_V5_WEIGHTS_DEFAULT[i]) / FSRS_V5_WEIGHTS_DEFAULT[i]
+            max_drift = max(max_drift, drift)
+
     print(f"\n[OK] Optimized parameters saved to config.json")
     print(f"  Loss: {best_loss:.4f} (lower is better)")
     print(f"  Optimized {15} of 19 parameters (w[0]-w[14])")
+    if max_drift > 2.0:
+        print(f"  ⚠️ Warning: parameters drifted {max_drift:.1f}x from defaults.")
+        print(f"  This may indicate unusual review patterns. Consider resetting.")
     print(f"  To use: algorithm is already 'fsrs' — parameters applied automatically")
     print(f"  To reset: srs.py config set fsrs_weights null")
+    print(f"\n  [TIP] Re-optimize every 2-3 months. Give new parameters 2 weeks to evaluate.")
 
 
 def _show_topic_status(topic: str, concepts: dict[str, Any]) -> None:
