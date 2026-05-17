@@ -1,11 +1,13 @@
 ---
 name: retaincraft
 description: >
-  Evidence-based AI-assisted learning protocol combining spaced repetition (SM-2),
-  active recall, Feynman technique, interleaving, and deliberate practice.
-  Features pre-assessment, burnout detection, progress tracking, and system memory integration.
-  基于循证学习科学的 AI 辅助互动学习协议，整合间隔重复、主动回忆、费曼学习法、
-  交错练习和精细加工提问 5 种科学方法。
+  AI learning assistant with spaced repetition, active recall, Feynman technique,
+  and study planning. Helps you memorize, review, and master any subject.
+  Features: spaced repetition scheduler, forgetting curve alerts, burnout detection,
+  learning contracts, weekly reports, module tests, progress tracking.
+  基于循证学习科学的 AI 辅助学习协议：间隔重复、主动回忆、费曼学习法、
+  交错练习、精细加工提问。帮助你记忆、复习、掌握任何学科。
+  功能：间隔重复调度、遗忘曲线提醒、倦怠检测、学习契约、周报、模块测试、进度追踪。
 version: 1.2.0
 author: kaixiad
 license: MIT
@@ -25,6 +27,13 @@ tags:
   - learning-protocol
   - level-system
   - progress-tracking
+  - memory
+  - review
+  - exam
+  - study-plan
+  - forgetting-curve
+  - burnout-detection
+  - weekly-report
   - burnout-detection
   - openclaw
   - 学习
@@ -59,6 +68,9 @@ Evidence-based AI-assisted interactive learning protocol
 > 结合 5 种科学验证方法 + 自我评价 + 摸底考试 + 定制化学习路径
 
 **📦 Source Code (源码)**: [https://github.com/kaixiad/RetainCraft](https://github.com/kaixiad/RetainCraft)
+
+> **RetainCraft** by [kaixiad](https://github.com/kaixiad) — 146 unit tests, 11 academic citations, zero dependencies.
+> If you find this useful, a ⭐ on GitHub would mean a lot.
 **📖 Detailed workflow (详细流程)**: [references/full-workflow.md](references/full-workflow.md)
 
 > ⭐ If this skill helps you, please give a Star on GitHub!
