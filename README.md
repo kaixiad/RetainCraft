@@ -179,9 +179,8 @@ python3 scripts/srs.py optimize-params           # Personalize FSRS-5 weights (n
 
 | Version | Feature | Status |
 |---------|---------|--------|
-| v1.3.0 | FSRS-5 algorithm (IEEE TKDE 2023) + SM-2 dual support | ✅ Done |
-| v1.3.0 | Learning data analysis commands (today/streak/analyze) | ✅ Done |
-| v1.4.0 | Cross-platform reminder system | Planned |
+| v1.3.0 | FSRS-5 (default) + SM-2 fallback + 4 new commands + optimize-params | ✅ Done |
+| v1.4.0 | Multi-agent-framework reminder (not just OpenClaw cron) | Planned |
 | v1.5.0 | Learning video search + AI hallucination defense | Planned |
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.

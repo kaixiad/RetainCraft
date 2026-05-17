@@ -180,9 +180,8 @@ python3 scripts/srs.py optimize-params           # 个性化 FSRS-5 参数（需
 
 | 版本 | 功能 | 状态 |
 |------|------|------|
-| v1.3.0 | FSRS-5 算法（IEEE TKDE 2023）+ SM-2 双支持 | ✅ 已完成 |
-| v1.3.0 | 学习数据分析命令（today/streak/analyze） | ✅ 已完成 |
-| v1.4.0 | 跨平台提醒系统 | 计划中 |
+| v1.3.0 | FSRS-5（默认）+ SM-2 备选 + 4 个新命令 + 参数优化 | ✅ 已完成 |
+| v1.4.0 | 多 agent 框架提醒兼容（不仅限 OpenClaw cron） | 计划中 |
 | v1.5.0 | 学习视频搜索 + AI 幻觉防护 | 计划中 |
 
 详见 [CHANGELOG.md](CHANGELOG.md) 版本历史。

@@ -5,6 +5,88 @@
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，
 版本号遵循 [语义化版本控制](https://semver.org/lang/zh-CN/)。
 
+---
+
+## [1.3.0] - 2026-05-17
+
+**测试**: 159 个测试全部通过（+13）
+
+### 新增
+
+#### FSRS-5 间隔重复算法（默认）
+- 基于 IEEE TKDE 2023 论文（Su, Ye, Nie, Cao & Chen）
+- 自实现 ~120 行，保持零外部依赖
+- 8 个核心函数：初始稳定性/难度、遗忘曲线、稳定性更新
+- 19 个默认参数（FSRS_V5_WEIGHTS）
+- 幂律遗忘曲线：R(t, S) = (1 + FACTOR × t / S)^DECAY
+- 难度均值回归、Hard 惩罚、Easy 奖励
+- 防御性工程：NaN/Inf 检查、值域 clamp、错误回退
+
+#### 精确 Retrievability 计算
+- R 从近似值 0.9 升级为精确计算：R(t, S) = (1 + FACTOR × elapsed / S)^DECAY
+- elapsed = today - (next_review - interval_days)
+- 同天 review 正确得到 R≈1.0，逾期 review 正确得到 R<0.9
+
+#### config algorithm 切换
+- `srs.py config set algorithm fsrs` — 启用 FSRS-5（默认）
+- `srs.py config set algorithm sm2` — 使用 SM-2（备选）
+- 向后兼容：旧数据自动初始化 FSRS 字段
+
+#### 4 个新命令
+- `today` — 今日学习计划，含逾期分析和建议
+- `streak` — 连续学习天数（Duolingo 模型：从今天算）
+- `analyze` — 学习趋势分析、薄弱概念、活动统计
+- `optimize-params` — 基于本地 review 历史优化 FSRS-5 参数
+  - 数值梯度下降（有限差分），纯 Python 实现
+  - 需 1000+ 次 review，检查评分分布和参数漂移
+  - 参考 FSRS 社区最佳实践
+
+#### 个性化参数支持
+- `config.fsrs_weights` — 存储优化后的 19 个参数
+- `FSRS_V5_WEIGHTS_DEFAULT` — 不可变默认值
+- `FSRS_V5_WEIGHTS` — 可个性化
+
+#### 学习模板
+- `learning-templates.json` — 3 个模板（编程语言、外语学习、考试复习）
+
+### 重构
+
+#### main() 函数重构
+- 246 行 if-elif → 38 行 dispatch 字典（O(1) 查表）
+- 所有 cmd_* 函数统一签名为 `(args: list[str])`
+- 7 个新 cmd_* 函数从 main() 内联逻辑提取
+
+#### 超长函数拆分（全部 < 50 行）
+- `cmd_review` (94→39), `check_burnout` (88→42)
+- `calc_level_by_accuracy` (84→38), `cmd_status` (74→23)
+
+#### 魔法数字提取
+- `SM2_SECOND_INTERVAL = 6` 替换硬编码
+
+### 修复
+
+- **FSRS rating 映射**：`"again"` 改为 `"wrong"`，匹配系统实际使用的评分
+- **FSRS 遗忘路径**：`rating == "again"` 改为 `rating_int == 1`
+- **FSRS 稳定性永不增加**：R 从 1.0 改为精确计算
+- **cmd_analyze 缺少 ensure_dirs()**：新用户首次运行不再崩溃
+- **R12 作者归属**：Su, J. 为第一作者（非 Ye, J.）
+- **帮助文本**：补充 today/streak/analyze/optimize-params 命令
+
+### 新增学术引用
+
+| # | 引用 | 用途 |
+|---|------|------|
+| R12 | Su, Ye, Nie, Cao & Chen (2023) — FSRS-5 IEEE TKDE | FSRS-5 实现 |
+| R13 | fsrs-rs 工程实践 | 技术参考 |
+
+### 文档更新
+- `SKILL.md` 版本 1.3.0，FSRS-5 默认标注
+- `README.md` / `README.zh-CN.md` — 23 个命令、FSRS-5 默认、optimize-params
+- `evidence.md` R12、R13（作者归属修正）
+- `CONTRIBUTING.md` — 测试数 159、文件结构更新
+
+---
+
 ## [1.2.0] - 2026-05-15
 
 **测试**: 146 个测试全部通过
@@ -38,35 +120,15 @@
 - **问题**: 第二次复习间隔计算为 `1 × 2.5 = 2.5 天`（取整为 2 天）
 - **正确值**: 原始 SM-2 算法规定第二次间隔为 **6 天**（Wozniak, 1987）
 - **修复**: 第二次复习（`reviews==1`）时直接设为 6 天
-- **来源**: https://www.super-memory.com/english/ol/sm2.htm
 
-#### JSON 解析兼容性修复
-- `_cron_exists()` 和 `_get_user_channel()` 适配 OpenClaw 不同版本的 JSON 输出格式
-- 新版本返回 `{"jobs": [...]}` 结构，旧版本返回数组
-- 修复后新旧版本通用
+#### 其他修复
+- JSON 解析兼容性（适配 OpenClaw 不同版本）
+- iterdir() 安全性（3 处缺少 ensure_dirs()）
+- setup-reminder 会话类型（改为 isolated + announce）
+- 降级逻辑（while 循环改为单次 if 判断）
+- 代码质量：时间格式验证、PEP 8 规范化
 
-#### iterdir() 安全性修复
-- 修复 3 处 `TOPICS_DIR.iterdir()` 缺少 `ensure_dirs()` 调用
-- 影响命令: `cmd_reminder`、`profile --update`、`cmd_weekly_report`
-- 修复后新用户首次运行不再崩溃
-
-#### setup-reminder 会话类型修复
-- **问题**: 每日提醒使用 `--session main` + `--message`，但 OpenClaw 对 main session 要求 `--system-event`
-- **修复**: 改为 `--session isolated` + `--announce`（与周报一致）
-- **影响**: 每日提醒 cron 创建失败或投递行为异常
-
-#### 降级逻辑修复（渐进降级）
-- **问题**: while 循环用同一组 3 次测试连续降多级（L5→L2）
-- **正确行为**: 每次检查只降一级，下次新测试结果再决定是否继续降
-- **科学依据**: SM-2 算法答错只重置 interval 不跳阶段；Ebbinghaus 遗忘曲线是连续函数
-- **修复**: while 循环改为单次 if 判断
-
-#### 代码质量改进
-- `cmd_setup_reminder` 添加 HH:MM 时间格式验证
-- `record-simulation` 现在记录到 `learning_log.json`，周报包含模拟数据
-- PEP 8 规范化：12 处顶层函数间空行修正
-
-### 新增学术引用（5 篇）
+### 新增学术引用
 
 | # | 引用 | 用途 |
 |---|------|------|
@@ -76,165 +138,39 @@
 | R10 | Ebbinghaus (1885) — 遗忘曲线 | 遗忘风险提醒 |
 | R11 | Bandura (1997) — 自我效能感 | 周报鼓励语 |
 
-所有引用均经过溯源验证，详见 `scripts/evidence.md`。
-
-### 文档更新
-
-- `CHANGELOG.md` — v1.2.0 完整变更日志
-- `README.md` / `README.zh-CN.md` — CLI 命令列表更新（11 → 18 个命令）
-- `SKILL.md` — 版本号更新，新增执行清单第 5-8 条，学习契约（Step 0.1）
-- `evidence.md` — 新增 5 篇引用的详细溯源信息
-- `docu-review-report.md` — 新增 R7-R11 溯源验证，SM-2 参数修正
-
----
-
-## [1.3.0] - 2026-05-17
-
-**测试**: 159 个测试全部通过（+13）
-
-### 新增
-
-#### FSRS-5 间隔重复算法
-- 基于 IEEE TKDE 2023 论文（DOI: 10.1109/TKDE.2023.3251721）
-- 自实现 ~120 行，保持零外部依赖
-- 8 个核心函数：初始稳定性/难度、遗忘曲线、稳定性更新
-- 19 个默认参数（FSRS_V5_WEIGHTS）
-- 幂律遗忘曲线：R(t, S) = (1 + FACTOR × t / S)^DECAY
-- 难度均值回归、Hard 惩罚、Easy 奖励
-- 防御性工程：NaN/Inf 检查、值域 clamp、错误回退
-
-#### config algorithm 切换
-- `srs.py config set algorithm fsrs` — 启用 FSRS-5 调度
-- `srs.py config set algorithm sm2` — 使用 SM-2（默认）
-- 向后兼容：旧数据自动使用 SM-2
-
-#### 3 个新命令
-- `today` — 显示今日学习计划，含逾期分析和建议
-- `streak` — 显示连续学习天数
-- `analyze` — 学习趋势分析、薄弱概念、活动统计
-
-#### 学习模板
-- `learning-templates.json` — 3 个模板（编程语言、外语学习、考试复习）
-
-### 重构
-
-#### main() 函数重构
-- 246 行 if-elif → 38 行 dispatch 字典（O(1) 查表）
-- 所有 cmd_* 函数统一签名为 `(args: list[str])`
-- 7 个新 cmd_* 函数从 main() 内联逻辑提取
-
-#### 超长函数拆分（全部 < 50 行）
-- `cmd_review` (94→39), `check_burnout` (88→42)
-- `calc_level_by_accuracy` (84→38), `cmd_status` (74→23)
-
-#### 魔法数字提取
-- `SM2_SECOND_INTERVAL = 6` 替换硬编码
-
-### 新增学术引用
-
-| # | 引用 | 用途 |
-|---|------|------|
-| R12 | Ye et al. (2023) — FSRS-5 IEEE TKDE | FSRS-5 实现 |
-| R13 | fsrs-rs 工程实践 | 技术参考 |
-
-### 文档更新
-- `SKILL.md` 版本 1.3.0
-- `evidence.md` R12、R13
-
 ---
 
 ## [1.1.0] - 2026-05-13
 
 ### 新增
-- `check-session [topic]` 命令：检测未记录的模块测试，防止 AI 遗忘导致等级不更新
-- `check-burnout <topic> [--window N]` 命令：分析学习倦怠风险，返回趋势和休息建议
+- `check-session [topic]` 命令：检测未记录的模块测试
+- `check-burnout <topic> [--window N]` 命令：分析学习倦怠风险
 - Session Checkpoint 机制：每个 Phase 结束时强制状态保存自检清单
-- 恢复流程新增 check-session 步骤：启动时验证上次 session 是否正常关闭
-- 13 个新测试用例（127 个总计），覆盖 check-session 和 check-burnout
+- 13 个新测试用例（127 个总计）
 
 ### 变更
 - 项目重命名为 RetainCraft（原 interactive-learning）
-- SKILL.md tags 优化：新增 evidence-based、ai-tutor、study-protocol、interleaving、level-system、费曼学习法、AI辅导、循证学习
-- SKILL.md Phase 4 SM-2 公式歧义修复：hard/easy 公式补充"同时"连接词
-- docu-review-report 行号引用改为章节引用，避免版本漂移
-- docu-review-report 更新修复状态（升级阈值符号、费曼检验评分、SM-2 公式）
+- MIT 许可证、CONTRIBUTING.md、CHANGELOG.md
+- GitHub Actions CI/CD（Python 3.10/3.11/3.12 矩阵测试）
+- 新增 sanitize_concept()、_atomic_text_save()
+- 46 个新测试（114 个总计）
 
-### 新增
-- 添加 MIT 许可证文件
-- 创建 requirements.txt 声明 Python 版本要求
-- 添加 CONTRIBUTING.md 贡献指南
-- 添加 CHANGELOG.md 版本变更记录
-- 添加 GitHub Actions CI/CD 工作流（.github/workflows/ci.yml），支持 Python 3.10/3.11/3.12 矩阵测试
-- 添加 GitHub Issue 模板（Bug 报告 + 功能请求）
-- 添加 Pull Request 模板
-- 新增 `sanitize_concept()` 函数，为 concept_name 提供输入验证（防御纵深）
-- 新增 `_atomic_text_save()` 函数，防止文本文件写入中断导致数据损坏
-- 新增 46 个单元测试用例（114 个总计），覆盖 sanitize_concept、_atomic_text_save、save_progress、simulation 边界等
-
-### 修复
-- 修正 README.md 中的学术引用错误（主动回忆来源）
-- 统一 AI 辅导效果量描述格式
-- 统一 srs.py 错误消息为英文（原中英文混杂），提升国际化兼容性
-- SKILL.md Phase 4 SM-2 描述：区分 good/hard/easy/wrong 四种评分公式（原仅描述 good）
-- SKILL.md 明确费曼检验为 AI 助手执行的附加验证流程，不在 srs.py 代码中强制执行
-- evidence.md 学术引用溯源：将 Wang & Srivastava (2025) 博客文章替换为原始研究论文 Wang et al. (2024) Tutor CoPilot (arXiv:2410.03017)，提升引用规范性
-
-### 优化
-- 完善文档结构，符合开源项目标准
-- 为所有函数添加类型提示和文档字符串
-- 优化配置加载机制，添加缓存功能
-- 改进输入验证和错误处理
-- 提升代码可读性和可维护性
-- SKILL.md config.json示例补充level_thresholds配置
-- SKILL.md Phase 2.5明确评分维度引用scenarios.md
-- 将"方案质量审计"章节从SKILL.md移入README.md
-- Step 0.5补充输出格式、字数上限和用户确认步骤
-- 更新README中srs.py行数和测试用例数
-- 将draft-section2.md移至docs/目录
-- 删除SKILL.md通用评分维度表格，统一引用scenarios.md
-- 补充费曼学习法与自我解释的认知机制差异说明
-- 统一L1→L2升级规则为"前2次测试平均>=20%"
-- 明确降级最低到L2的设计决策
-- 提取overdue计算为公共函数，添加畸形日期防护
-- 补充calc_overdue函数的边界测试用例
-- `save_progress()` 改用原子写入模式，防止进程中断导致数据损坏
-- `cmd_add()` 和 `cmd_rate()` 均对 concept_name 进行输入验证
-- 测试从 monkey-patch 迁移到 unittest.mock.patch，提升测试代码规范性
+---
 
 ## [1.0.0] - 2026-05-06
 
 ### 新增
 - 初始版本发布
-- 基于循证学习科学的 AI 辅助互动学习协议
-- 5 种科学验证学习方法整合：
-  - 间隔重复（SM-2 算法）
-  - 主动回忆
-  - 费曼学习法/自我解释
-  - 交错练习
-  - 精细加工提问
+- 5 种循证学习方法：间隔重复、主动回忆、费曼学习法、交错练习、精细加工提问
 - SM-2 间隔重复算法实现
 - 等级系统（L1-L5）和升降级规则
-- 摸底考试和学后测试
-- 倦怠检测机制
-- 搜索优先防幻觉机制
-- 记忆持久化方案
-- Heartbeat 集成复习提醒
-- 多主题支持和优先级队列
-- 实战模拟场景库
-- 完整的 CLI 工具（srs.py）
 - 68 个单元测试用例
 
-### 技术细节
-- Python 标准库实现，无外部依赖
-- 跨平台支持（Windows/macOS/Linux）
-- JSON 数据存储格式
-- 模块化设计，易于扩展
-
 ### 学术引用
-- Donoghue & Hattie (2021) 元分析 - 5 项核心效果量
-- Kestin et al. (2025) 哈佛 RCT - AI 辅导效果
-- Ericsson et al. (1993) - 刻意练习理论
-- SM-2 算法 (Wozniak, 1987) - 间隔重复实现
+- Donoghue & Hattie (2021) 元分析
+- Kestin et al. (2025) 哈佛 RCT
+- Ericsson et al. (1993) 刻意练习
+- SM-2 算法 (Wozniak, 1987)
 
 ---
 
@@ -242,10 +178,8 @@
 
 - **新增**：新功能
 - **修复**：Bug 修复
-- **优化**：性能改进或代码重构
-- **废弃**：即将移除的功能
-- **移除**：已移除的功能
-- **安全**：安全相关的修复
+- **重构**：代码重构
+- **优化**：性能改进
 
 ---
 
