@@ -174,7 +174,7 @@ Evidence-based AI-assisted interactive learning protocol
 📚 学习节奏
 - 每个模块预计：3-5 天
 - 每天新概念：2-3 个
-- 每天复习：根据 SM-2 到期情况
+- 每天复习：根据间隔重复算法（SM-2/FSRS-5）到期情况
 
 🎯 目标
 - 目标等级：L4 熟练
@@ -239,7 +239,7 @@ Evidence-based AI-assisted interactive learning protocol
 
 ### Two Independent Dimensions (两个独立维度)
 - **Level (等级)** = Based on module test accuracy (权威)
-- **SM-2 Status (SM-2 状态)** = Based on concept mastery ratio (仅展示)
+- **Review Status (复习状态)** = Based on concept mastery ratio (仅展示)
 
 ---
 
@@ -275,9 +275,9 @@ Evidence-based AI-assisted interactive learning protocol
 | Impact (影响) | No level change (不影响等级) | Determines level (决定等级升降) |
 | Command (命令) | srs.py rate | srs.py record-test |
 
-### Phase 4: Spaced Repetition (间隔复习 - SM-2 Algorithm)
-- Based on SM-2 schedule, proactive reminders when due
-- 基于 SM-2 时间表，到期主动提醒
+### Phase 4: Spaced Repetition (间隔复习 - SM-2/FSRS-5)
+- Based on spaced repetition schedule (SM-2 or FSRS-5, configurable), proactive reminders when due
+- 基于间隔重复时间表（SM-2 或 FSRS-5，可配置），到期主动提醒
 - Heartbeat check: `python3 scripts/srs.py due`
 - 心跳检查：`python3 scripts/srs.py due`
 
@@ -355,7 +355,7 @@ python3 scripts/srs.py check-burnout <topic>   # Analyze burnout risk
 | System (系统) | Stores (存什么) | Location (位置) |
 |---------------|-----------------|-----------------|
 | System memory (系统 memory) | Progress summary, weak points (进度摘要、薄弱点) | memory/YYYY-MM-DD.md |
-| ~/learn/ | SM-2 data, concept mastery (SM-2 数据、概念掌握度) | ~/learn/topics/{topic}/concepts.json |
+| ~/learn/ | SRS data, concept mastery (间隔重复数据、概念掌握度) | ~/learn/topics/{topic}/concepts.json |
 
 ### Recovery Priority (恢复优先级)
 concepts.json > memory files (concepts.json > memory 文件)
