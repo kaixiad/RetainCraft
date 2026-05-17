@@ -1563,6 +1563,73 @@ def cmd_due(args: list[str]) -> None:
         print(f"     {mastery} {name} [acc: {accuracy}, int: {c['interval_days']}d]{overdue_str}")
 
 
+def cmd_today(args: list[str]) -> None:
+    """
+    Show today's learning plan with overdue analysis.
+
+    Design intent: More actionable than cmd_due — includes overdue count,
+    topic breakdown, and a learning recommendation.
+    """
+    ensure_dirs()
+    today_str = today()
+    all_due = []
+    overdue_count = 0
+
+    for topic_dir in TOPICS_DIR.iterdir():
+        if not topic_dir.is_dir():
+            continue
+        if topic_dir.name.startswith(("test-", "debug-", "temp-")):
+            continue
+        concepts = load_concepts(topic_dir.name)
+        for name, c in concepts.items():
+            if c["next_review"] and c["next_review"] <= today_str:
+                overdue = calc_overdue(c["next_review"])
+                if overdue > 0:
+                    overdue_count += 1
+                all_due.append((topic_dir.name, name, c, overdue))
+
+    if not all_due:
+        print("\n[TODAY] No reviews due today. Great job staying on track!")
+        return
+
+    # Sort by overdue (most overdue first)
+    all_due.sort(key=lambda x: -x[3])
+
+    config = load_config()
+    limit = config.get("daily_review_limit", 20)
+
+    # Group by topic
+    topics_summary: dict[str, list] = {}
+    for topic, name, c, overdue in all_due:
+        if topic not in topics_summary:
+            topics_summary[topic] = []
+        topics_summary[topic].append((name, c, overdue))
+
+    print(f"\n[TODAY] Learning Plan for {today_str}\n")
+    print(f"  Total due: {len(all_due)} concept(s)")
+    if overdue_count > 0:
+        print(f"  Overdue:   {overdue_count} concept(s) — prioritize these first!")
+    print()
+
+    for topic, items in topics_summary.items():
+        print(f"  [{topic}] ({len(items)} due)")
+        for name, c, overdue in items[:5]:  # Show top 5 per topic
+            overdue_str = f" ({overdue}d overdue)" if overdue > 0 else ""
+            mastery = get_mastery_emoji(c["mastery"])
+            print(f"    {mastery} {name}{overdue_str}")
+        if len(items) > 5:
+            print(f"    ... and {len(items) - 5} more")
+
+    # Recommendation
+    print()
+    if overdue_count > len(all_due) // 2:
+        print("  [TIP] Many concepts are overdue. Focus on reviewing before learning new material.")
+    elif overdue_count > 0:
+        print("  [TIP] Start with overdue concepts, then review normally.")
+    else:
+        print("  [TIP] All concepts are on time. Keep up the good work!")
+
+
 def _show_topic_status(topic: str, concepts: dict[str, Any]) -> None:
     """Display status for a single topic. Called by cmd_status."""
     level_code, level_name, level_emoji = calc_level(concepts, topic=topic)
@@ -2335,6 +2402,7 @@ def main() -> None:
         "review": cmd_review,
         "rate": cmd_rate,
         "due": cmd_due,
+        "today": cmd_today,
         "status": cmd_status,
         "record-test": cmd_record_test,
         "test-history": cmd_test_history,
