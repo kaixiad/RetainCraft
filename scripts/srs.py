@@ -950,7 +950,9 @@ def today() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-RATING_TO_INT = {"again": 1, "hard": 2, "good": 3, "easy": 4}
+# Map user-facing ratings to FSRS integer ratings
+# "wrong" = Again (1), "hard" = Hard (2), "good" = Good (3), "easy" = Easy (4)
+RATING_TO_INT = {"wrong": 1, "hard": 2, "good": 3, "easy": 4}
 
 
 def _calc_next_review_fsrs(c: dict[str, Any], rating: str) -> dict[str, Any]:
@@ -978,9 +980,9 @@ def _calc_next_review_fsrs(c: dict[str, Any], rating: str) -> dict[str, Any]:
             d = fsrs_update_difficulty(d, rating_int)
 
             # Update stability based on rating
-            if rating == "again":
+            if rating_int == 1:  # Again/wrong = lapse
                 s = fsrs_stability_after_forgetting(s, d, r)
-            else:
+            else:  # Hard/Good/Easy = successful recall
                 s = fsrs_stability_after_recall(s, d, r, rating_int)
 
             # Defensive: check for NaN/Inf
