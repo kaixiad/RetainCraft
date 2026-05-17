@@ -1089,13 +1089,17 @@ def calc_level(concepts: dict[str, Any], topic: str | None = None) -> tuple[str,
 
 # === Commands ===
 
-def cmd_init(topic: str) -> None:
+def cmd_init(args: list[str]) -> None:
     """
     Initialize a new topic.
-    
-    Args:
-        topic: Topic name to initialize
+
+    Design intent: Accept raw args list so main() dispatch is uniform.
+    Validates topic name to prevent path traversal.
     """
+    if len(args) < 1:
+        print("Usage: srs.py init <topic>")
+        return
+    topic = args[0]
     try:
         topic = sanitize_topic(topic)
     except SanitizeError as e:
@@ -1115,14 +1119,18 @@ def cmd_init(topic: str) -> None:
     print(f"[OK] Topic '{topic}' created at {topic_dir}")
 
 
-def cmd_add(topic: str, concept_name: str) -> None:
+def cmd_add(args: list[str]) -> None:
     """
     Add a concept to a topic.
-    
-    Args:
-        topic: Topic name
-        concept_name: Concept name to add
+
+    Design intent: Accept raw args list so main() dispatch is uniform.
+    Both topic and concept are sanitized to prevent path traversal.
     """
+    if len(args) < 2:
+        print("Usage: srs.py add <topic> <concept>")
+        return
+    topic = args[0]
+    concept_name = args[1]
     try:
         topic = sanitize_topic(topic)
         concept_name = sanitize_concept(concept_name)
@@ -1140,18 +1148,20 @@ def cmd_add(topic: str, concept_name: str) -> None:
     print(f"[OK] Added '{concept_name}' to '{topic}'. First review due today.")
 
 
-def cmd_rate(topic: str, concept_name: str, rating: str) -> None:
+def cmd_rate(args: list[str]) -> None:
     """
     Non-interactively rate a concept and update its SM-2 state.
 
+    Design intent: Accept raw args list so main() dispatch is uniform.
     This is the safe way for AI assistants to update concept review status
     without needing to call the interactive cmd_review.
-
-    Args:
-        topic: Topic name
-        concept_name: Concept name to rate
-        rating: Review rating ("easy", "good", "hard", "wrong")
     """
+    if len(args) < 3:
+        print("Usage: srs.py rate <topic> <concept> <rating>")
+        return
+    topic = args[0]
+    concept_name = args[1]
+    rating = args[2]
     try:
         topic = sanitize_topic(topic)
         concept_name = sanitize_concept(concept_name)
@@ -1180,13 +1190,17 @@ def cmd_rate(topic: str, concept_name: str, rating: str) -> None:
     print(f"[OK] Rated '{concept_name}' as '{rating}'. Next review: {updated['next_review']}")
 
 
-def cmd_review(topic: str) -> None:
+def cmd_review(args: list[str]) -> None:
     """
     Start a review session for a topic.
-    
-    Args:
-        topic: Topic name to review
+
+    Design intent: Accept raw args list so main() dispatch is uniform.
+    Interactive session — prompts user for ratings via stdin.
     """
+    if len(args) < 1:
+        print("Usage: srs.py review <topic>")
+        return
+    topic = args[0]
     try:
         topic = sanitize_topic(topic)
     except SanitizeError as e:
@@ -1272,8 +1286,8 @@ def cmd_review(topic: str) -> None:
     print(f"\n[OK] Reviewed {reviewed} concept(s). Progress saved.")
 
 
-def cmd_due() -> None:
-    """Show all due reviews for today."""
+def cmd_due(args: list[str]) -> None:
+    """Show all due reviews for today. Ignores args."""
     ensure_dirs()
     today_str = today()
     all_due = []
@@ -1313,14 +1327,15 @@ def cmd_due() -> None:
         print(f"     {mastery} {name} [acc: {accuracy}, int: {c['interval_days']}d]{overdue_str}")
 
 
-def cmd_status(topic: str | None = None) -> None:
+def cmd_status(args: list[str]) -> None:
     """
     Show learning status.
-    
-    Args:
-        topic: Optional topic name to show specific status
+
+    Design intent: Accept raw args list so main() dispatch is uniform.
+    Optional topic argument shows topic-specific status.
     """
     ensure_dirs()
+    topic = args[0] if args else None
 
     if topic:
         try:
@@ -1388,15 +1403,25 @@ def cmd_status(topic: str | None = None) -> None:
         print(f"  Due today: {total_due}")
 
 
-def cmd_config(key: str | None = None, value: str | None = None) -> None:
+def cmd_config(args: list[str]) -> None:
     """
     Show or set configuration.
-    
-    Args:
-        key: Configuration key to show or set
-        value: Value to set (if key is provided)
+
+    Design intent: Accept raw args list so main() dispatch is uniform.
+    Handles 'set' subcommand internally: config set <key> <value>.
     """
     config = load_config()
+
+    # Handle "set" subcommand: args = ["set", "key", "value"]
+    if args and args[0] == "set":
+        if len(args) < 3:
+            print("Usage: srs.py config set <key> <value>")
+            return
+        key = args[1]
+        value = args[2]
+    else:
+        key = args[0] if args else None
+        value = args[1] if len(args) > 1 else None
 
     if key is None:
         print(f"\n[CONFIG] Config ({CONFIG_FILE}):\n")
@@ -1551,8 +1576,8 @@ def _recreate_crons_with_channel(channel: str) -> None:
         pass
 
 
-def cmd_setup_reminder() -> None:
-    """Setup learning reminder and weekly report cron jobs."""
+def cmd_setup_reminder(args: list[str]) -> None:
+    """Setup learning reminder and weekly report cron jobs. Ignores args."""
     config = load_config()
     contract = config.get("learning_contract", {})
     reminder_time = contract.get("time", "09:00")
@@ -1621,8 +1646,8 @@ def cmd_setup_reminder() -> None:
             print(f"[WARN] Failed to create weekly report cron: {e}")
 
 
-def cmd_check_reminder() -> None:
-    """Check the status of learning reminders."""
+def cmd_check_reminder(args: list[str]) -> None:
+    """Check the status of learning reminders. Ignores args."""
     print("\n[CHECK-REMINDER] Reminder Status:\n")
 
     # Check daily reminder
@@ -1647,8 +1672,8 @@ def cmd_check_reminder() -> None:
         print(f"     Run 'srs.py setup-reminder' to enable")
 
 
-def cmd_switch_channel() -> None:
-    """List available notification channels and switch the active one."""
+def cmd_switch_channel(args: list[str]) -> None:
+    """List available notification channels and switch the active one. Ignores args."""
     current = _get_user_channel()
     print(f"\n[SWITCH-CHANNEL] Current channel: {current or 'not detected'}\n")
 
@@ -1700,8 +1725,8 @@ def cmd_switch_channel() -> None:
     print(f"  [OK] Channel switched to {selected['type']}.")
 
 
-def cmd_reminder() -> None:
-    """Generate today's learning plan with forgetting risk analysis."""
+def cmd_reminder(args: list[str]) -> None:
+    """Generate today's learning plan with forgetting risk analysis. Ignores args."""
     ensure_dirs()
     config = load_config()
     contract = config.get("learning_contract", {})
@@ -1769,8 +1794,8 @@ def cmd_reminder() -> None:
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
 
-def cmd_weekly_report() -> None:
-    """Generate weekly learning report data."""
+def cmd_weekly_report(args: list[str]) -> None:
+    """Generate weekly learning report data. Ignores args."""
     log = load_learning_log()
     now = datetime.now()
 
@@ -1831,8 +1856,228 @@ def cmd_weekly_report() -> None:
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
+def cmd_record_test(args: list[str]) -> None:
+    """
+    Record a test result for a topic.
+
+    Design intent: Extracted from main() to enable dispatch dict pattern.
+    Handles integer parsing and error display.
+    """
+    if len(args) < 3:
+        print("Usage: srs.py record-test <topic> <total> <correct>")
+        return
+    try:
+        total = int(args[1])
+        correct = int(args[2])
+    except ValueError:
+        print("Error: total and correct must be integers")
+        return
+    try:
+        result = record_test(args[0], total, correct)
+        print(f"[OK] Recorded test for '{args[0]}': {correct}/{total} ({result['accuracy']:.0%})")
+        level_code, level_name, level_emoji = calc_level_by_accuracy(args[0])
+        print(f"   Level: {level_emoji} {level_code} {level_name}")
+    except ValueError as e:
+        print(f"[ERROR] Input error: {e}")
+
+
+def cmd_test_history(args: list[str]) -> None:
+    """
+    Show test history for a topic or all topics.
+
+    Design intent: Extracted from main() to enable dispatch dict pattern.
+    """
+    topic = args[0] if args else None
+    history = load_test_history()
+    if topic:
+        tests = history.get(topic, [])
+        if not tests:
+            print(f"No test history for '{topic}'.")
+            return
+        print(f"\n[HISTORY] Test History: {topic}\n")
+        for i, t in enumerate(tests, 1):
+            print(f"  {i}. {t['timestamp'][:16]} | {t['correct']}/{t['total']} ({t['accuracy']:.0%})")
+        level_code, level_name, level_emoji = calc_level_by_accuracy(topic)
+        print(f"\n  Level: {level_emoji} {level_code} {level_name}")
+    else:
+        if not history:
+            print("No test history.")
+            return
+        print("\n[HISTORY] Test History:\n")
+        for tpc, tests in history.items():
+            level_code, level_name, level_emoji = calc_level_by_accuracy(tpc)
+            print(f"  [DIR] {tpc}: {len(tests)} tests | {level_emoji} {level_code} {level_name}")
+
+
+def cmd_record_simulation(args: list[str]) -> None:
+    """
+    Record a simulation result.
+
+    Design intent: Extracted from main() to enable dispatch dict pattern.
+    Handles --rounds optional flag.
+    """
+    if len(args) < 3:
+        print("Usage: srs.py record-simulation <topic> <scenario> <score> [--rounds N]")
+        return
+    try:
+        score = int(args[2])
+    except ValueError:
+        print("Error: score must be an integer")
+        return
+    rounds = 3
+    if "--rounds" in args:
+        rounds_idx = args.index("--rounds")
+        if rounds_idx + 1 < len(args):
+            try:
+                rounds = int(args[rounds_idx + 1])
+            except ValueError:
+                print("Error: rounds must be an integer")
+                return
+    record_simulation(args[0], args[1], score, rounds)
+    print(f"[OK] Recorded simulation for '{args[0]}': {args[1]} | Score: {score}/100 | Rounds: {rounds}")
+
+
+def cmd_simulation_history(args: list[str]) -> None:
+    """
+    Show simulation history for a topic or all topics.
+
+    Design intent: Extracted from main() to enable dispatch dict pattern.
+    """
+    topic = args[0] if args else None
+    history = load_simulation_history()
+    if topic:
+        simulations = history.get(topic, [])
+        if not simulations:
+            print(f"No simulation history for '{topic}'.")
+            return
+        print(f"\n[HISTORY] Simulation History: {topic}\n")
+        for i, s in enumerate(simulations, 1):
+            print(f"  {i}. {s['timestamp'][:16]} | {s['scenario']} | Score: {s['score']}/100 | Rounds: {s['rounds']}")
+    else:
+        if not history:
+            print("No simulation history.")
+            return
+        print("\n[HISTORY] Simulation History:\n")
+        for tpc, simulations in history.items():
+            print(f"  [DIR] {tpc}: {len(simulations)} simulations")
+
+
+def cmd_profile(args: list[str]) -> None:
+    """
+    Show or update user profile.
+
+    Design intent: Extracted from main() to enable dispatch dict pattern.
+    Handles --update and --compare subcommands.
+    """
+    if args and args[0] == "--update":
+        ensure_dirs()
+        topics = [d.name for d in TOPICS_DIR.iterdir() if d.is_dir()]
+        if not topics:
+            print("No topics found.")
+            return
+        for topic in topics:
+            update_profile(topic)
+        print(f"[OK] Profile updated for {len(topics)} topic(s).")
+    elif args and args[0] == "--compare":
+        if len(args) < 2:
+            print("Usage: srs.py profile --compare <job_title>")
+            return
+        result = compare_profile_with_job(args[1])
+        print(f"\n[PROFILE] Profile Comparison: {args[1]}\n")
+        print(f"  当前最高等级: {result['current_level']}")
+        print(f"  总学习时长: {result['total_hours']:.1f} 小时")
+        if result.get('mastered_skills'):
+            skills = ', '.join(result['mastered_skills'][:5])
+            print(f"  掌握技能: {skills}")
+        if result.get('weaknesses'):
+            weaknesses = ', '.join(result['weaknesses'][:5])
+            print(f"  薄弱环节: {weaknesses}")
+        print(f"  [TIP] {result['suggestion']}")
+    else:
+        profile = load_profile()
+        print("\n[PROFILE] User Profile:\n")
+        print(f"  Goal: {profile['goal'] or 'Not set'}")
+        print(f"  Started: {profile['started']}")
+        print(f"  Total Hours: {profile['total_hours']:.1f}")
+        print(f"  Last Updated: {profile['last_updated'][:16]}")
+        if profile['topics']:
+            print("\n  Topics:")
+            for topic, data in profile['topics'].items():
+                status = "[OK]" if data['status'] == 'completed' else "[PROGRESS]"
+                print(f"    {status} {topic}: {data['level']} | {data['concepts_mastered']}/{data['concepts_total']} mastered | {data['test_avg']:.0f}% avg")
+        if profile['strengths']:
+            print(f"\n  Strengths: {', '.join(profile['strengths'][:5])}")
+        if profile['weaknesses']:
+            print(f"  Weaknesses: {', '.join(profile['weaknesses'][:5])}")
+
+
+def cmd_check_session(args: list[str]) -> None:
+    """
+    Check for unrecorded test sessions.
+
+    Design intent: Extracted from main() to enable dispatch dict pattern.
+    """
+    topic = args[0] if args else None
+    result = check_session(topic)
+    if result["status"] == "no_history":
+        print(f"[INFO] {result['message']}")
+    else:
+        threshold = result["stale_minutes_threshold"]
+        print(f"\n[CHECK-SESSION] Session Integrity Check (stale > {threshold} min)\n")
+        for f in result["findings"]:
+            status_icon = "[STALE]" if f["stale"] else "[OK]"
+            acc = f["last_accuracy"]
+            gap = f["gap_minutes"]
+            print(f"  {status_icon} {f['topic']:20s} | last: {f['last_record'][:16]} | acc: {acc:.0%} | {gap:.0f} min ago")
+        if result["stale_count"] > 0:
+            print(f"\n  [WARNING] {result['stale_count']} topic(s) have stale records.")
+            print("  If a module test was conducted without record-test, the level will not update.")
+        else:
+            print(f"\n  [OK] All records are fresh (within {threshold} minutes).")
+
+
+def cmd_check_burnout(args: list[str]) -> None:
+    """
+    Analyze burnout risk for a topic.
+
+    Design intent: Extracted from main() to enable dispatch dict pattern.
+    Handles --window optional flag.
+    """
+    if len(args) < 1:
+        print("Usage: srs.py check-burnout <topic> [--window N]")
+        return
+    topic = args[0]
+    window = 5
+    if "--window" in args:
+        idx = args.index("--window")
+        if idx + 1 < len(args):
+            try:
+                window = int(args[idx + 1])
+            except ValueError:
+                print("Error: window must be an integer")
+                return
+    try:
+        result = check_burnout(topic, window)
+    except SanitizeError as e:
+        print(f"Error: {e}")
+        return
+    if result["status"] == "no_data":
+        print(f"[INFO] {result['message']}")
+    else:
+        risk_map = {"low": "[LOW]", "medium": "[MEDIUM]", "high": "[HIGH]"}
+        print(f"\n[CHECK-BURNOUT] Burnout Risk Analysis: {topic}\n")
+        print(f"  Risk Level:   {risk_map.get(result['risk'], result['risk'])}")
+        print(f"  Trend:        {result['trend']}")
+        print(f"  Avg Accuracy: {result['avg_accuracy']:.0%} (last {result['recent_tests']} tests)")
+        print(f"  Consecutive below 50%: {result['consecutive_below_50']}")
+        if result["suggestions"]:
+            print("\n  Suggestions:")
+            for s in result["suggestions"]:
+                print(f"    - {s}")
+
+
 def main() -> None:
-    """Main entry point for the CLI."""
+    """Main entry point for the CLI. Dispatch via dict lookup for O(1) routing."""
     args = sys.argv[1:]
 
     if not args or args[0] in ("-h", "--help", "help"):
@@ -1840,237 +2085,33 @@ def main() -> None:
         return
 
     cmd = args[0]
+    cmd_args = args[1:]
 
-    if cmd == "init":
-        if len(args) < 2:
-            print("Usage: srs.py init <topic>")
-            return
-        cmd_init(args[1])
+    dispatch = {
+        "init": cmd_init,
+        "add": cmd_add,
+        "review": cmd_review,
+        "rate": cmd_rate,
+        "due": cmd_due,
+        "status": cmd_status,
+        "record-test": cmd_record_test,
+        "test-history": cmd_test_history,
+        "record-simulation": cmd_record_simulation,
+        "simulation-history": cmd_simulation_history,
+        "profile": cmd_profile,
+        "check-session": cmd_check_session,
+        "check-burnout": cmd_check_burnout,
+        "config": cmd_config,
+        "setup-reminder": cmd_setup_reminder,
+        "reminder": cmd_reminder,
+        "weekly-report": cmd_weekly_report,
+        "check-reminder": cmd_check_reminder,
+        "switch-channel": cmd_switch_channel,
+    }
 
-    elif cmd == "add":
-        if len(args) < 3:
-            print("Usage: srs.py add <topic> <concept>")
-            return
-        cmd_add(args[1], args[2])
-
-    elif cmd == "review":
-        if len(args) < 2:
-            print("Usage: srs.py review <topic>")
-            return
-        cmd_review(args[1])
-
-    elif cmd == "rate":
-        if len(args) < 4:
-            print("Usage: srs.py rate <topic> <concept> <rating>")
-            return
-        cmd_rate(args[1], args[2], args[3])
-
-    elif cmd == "due":
-        cmd_due()
-
-    elif cmd == "status":
-        topic = args[1] if len(args) > 1 else None
-        cmd_status(topic)
-
-    elif cmd == "record-test":
-        if len(args) < 4:
-            print("Usage: srs.py record-test <topic> <total> <correct>")
-            return
-        try:
-            total = int(args[2])
-            correct = int(args[3])
-        except ValueError:
-            print("Error: total and correct must be integers")
-            return
-        try:
-            result = record_test(args[1], total, correct)
-            print(f"[OK] Recorded test for '{args[1]}': {correct}/{total} ({result['accuracy']:.0%})")
-            level_code, level_name, level_emoji = calc_level_by_accuracy(args[1])
-            print(f"   Level: {level_emoji} {level_code} {level_name}")
-        except ValueError as e:
-            print(f"[ERROR] Input error: {e}")
-            return
-
-    elif cmd == "test-history":
-        topic = args[1] if len(args) > 1 else None
-        history = load_test_history()
-        if topic:
-            tests = history.get(topic, [])
-            if not tests:
-                print(f"No test history for '{topic}'.")
-                return
-            print(f"\n[HISTORY] Test History: {topic}\n")
-            for i, t in enumerate(tests, 1):
-                print(f"  {i}. {t['timestamp'][:16]} | {t['correct']}/{t['total']} ({t['accuracy']:.0%})")
-            level_code, level_name, level_emoji = calc_level_by_accuracy(topic)
-            print(f"\n  Level: {level_emoji} {level_code} {level_name}")
-        else:
-            if not history:
-                print("No test history.")
-                return
-            print(f"\n[HISTORY] Test History:\n")
-            for topic, tests in history.items():
-                level_code, level_name, level_emoji = calc_level_by_accuracy(topic)
-                print(f"  [DIR] {topic}: {len(tests)} tests | {level_emoji} {level_code} {level_name}")
-
-    elif cmd == "record-simulation":
-        if len(args) < 4:
-            print("Usage: srs.py record-simulation <topic> <scenario> <score> [--rounds N]")
-            return
-        try:
-            score = int(args[3])
-        except ValueError:
-            print("Error: score must be an integer")
-            return
-        rounds = 3
-        if "--rounds" in args:
-            rounds_idx = args.index("--rounds")
-            if rounds_idx + 1 < len(args):
-                try:
-                    rounds = int(args[rounds_idx + 1])
-                except ValueError:
-                    print("Error: rounds must be an integer")
-                    return
-        result = record_simulation(args[1], args[2], score, rounds)
-        print(f"[OK] Recorded simulation for '{args[1]}': {args[2]} | Score: {score}/100 | Rounds: {rounds}")
-
-    elif cmd == "simulation-history":
-        topic = args[1] if len(args) > 1 else None
-        history = load_simulation_history()
-        if topic:
-            simulations = history.get(topic, [])
-            if not simulations:
-                print(f"No simulation history for '{topic}'.")
-                return
-            print(f"\n[HISTORY] Simulation History: {topic}\n")
-            for i, s in enumerate(simulations, 1):
-                print(f"  {i}. {s['timestamp'][:16]} | {s['scenario']} | Score: {s['score']}/100 | Rounds: {s['rounds']}")
-        else:
-            if not history:
-                print("No simulation history.")
-                return
-            print(f"\n[HISTORY] Simulation History:\n")
-            for topic, simulations in history.items():
-                print(f"  [DIR] {topic}: {len(simulations)} simulations")
-
-    elif cmd == "profile":
-        if len(args) > 1 and args[1] == "--update":
-            # Update profile for all topics
-            ensure_dirs()
-            topics = [d.name for d in TOPICS_DIR.iterdir() if d.is_dir()]
-            if not topics:
-                print("No topics found.")
-                return
-            for topic in topics:
-                update_profile(topic)
-            print(f"[OK] Profile updated for {len(topics)} topic(s).")
-        elif len(args) > 1 and args[1] == "--compare":
-            if len(args) < 3:
-                print("Usage: srs.py profile --compare <job_title>")
-                return
-            result = compare_profile_with_job(args[2])
-            print(f"\n[PROFILE] Profile Comparison: {args[2]}\n")
-            print(f"  当前最高等级: {result['current_level']}")
-            print(f"  总学习时长: {result['total_hours']:.1f} 小时")
-            if result.get('mastered_skills'):
-                skills = ', '.join(result['mastered_skills'][:5])
-                print(f"  掌握技能: {skills}")
-            if result.get('weaknesses'):
-                weaknesses = ', '.join(result['weaknesses'][:5])
-                print(f"  薄弱环节: {weaknesses}")
-            print(f"  [TIP] {result['suggestion']}")
-        else:
-            profile = load_profile()
-            print(f"\n[PROFILE] User Profile:\n")
-            print(f"  Goal: {profile['goal'] or 'Not set'}")
-            print(f"  Started: {profile['started']}")
-            print(f"  Total Hours: {profile['total_hours']:.1f}")
-            print(f"  Last Updated: {profile['last_updated'][:16]}")
-            if profile['topics']:
-                print(f"\n  Topics:")
-                for topic, data in profile['topics'].items():
-                    status = "[OK]" if data['status'] == 'completed' else "[PROGRESS]"
-                    print(f"    {status} {topic}: {data['level']} | {data['concepts_mastered']}/{data['concepts_total']} mastered | {data['test_avg']:.0f}% avg")
-            if profile['strengths']:
-                print(f"\n  Strengths: {', '.join(profile['strengths'][:5])}")
-            if profile['weaknesses']:
-                print(f"  Weaknesses: {', '.join(profile['weaknesses'][:5])}")
-
-    elif cmd == "check-session":
-        topic = args[1] if len(args) > 1 else None
-        result = check_session(topic)
-        if result["status"] == "no_history":
-            print(f"[INFO] {result['message']}")
-        else:
-            threshold = result["stale_minutes_threshold"]
-            print(f"\n[CHECK-SESSION] Session Integrity Check (stale > {threshold} min)\n")
-            for f in result["findings"]:
-                status_icon = "[STALE]" if f["stale"] else "[OK]"
-                acc = f["last_accuracy"]
-                gap = f["gap_minutes"]
-                print(f"  {status_icon} {f['topic']:20s} | last: {f['last_record'][:16]} | acc: {acc:.0%} | {gap:.0f} min ago")
-            if result["stale_count"] > 0:
-                print(f"\n  [WARNING] {result['stale_count']} topic(s) have stale records.")
-                print("  If a module test was conducted without record-test, the level will not update.")
-            else:
-                print(f"\n  [OK] All records are fresh (within {threshold} minutes).")
-
-    elif cmd == "check-burnout":
-        if len(args) < 2:
-            print("Usage: srs.py check-burnout <topic> [--window N]")
-            return
-        topic = args[1]
-        window = 5
-        if "--window" in args:
-            idx = args.index("--window")
-            if idx + 1 < len(args):
-                try:
-                    window = int(args[idx + 1])
-                except ValueError:
-                    print("Error: window must be an integer")
-                    return
-        try:
-            result = check_burnout(topic, window)
-        except SanitizeError as e:
-            print(f"Error: {e}")
-            return
-        if result["status"] == "no_data":
-            print(f"[INFO] {result['message']}")
-        else:
-            risk_map = {"low": "[LOW]", "medium": "[MEDIUM]", "high": "[HIGH]"}
-            print(f"\n[CHECK-BURNOUT] Burnout Risk Analysis: {topic}\n")
-            print(f"  Risk Level:   {risk_map.get(result['risk'], result['risk'])}")
-            print(f"  Trend:        {result['trend']}")
-            print(f"  Avg Accuracy: {result['avg_accuracy']:.0%} (last {result['recent_tests']} tests)")
-            print(f"  Consecutive below 50%: {result['consecutive_below_50']}")
-            if result["suggestions"]:
-                print(f"\n  Suggestions:")
-                for s in result["suggestions"]:
-                    print(f"    - {s}")
-
-    elif cmd == "config":
-        key = args[1] if len(args) > 1 else None
-        value = args[2] if len(args) > 2 else None
-        if key == "set" and len(args) >= 4:
-            cmd_config(args[2], args[3])
-        else:
-            cmd_config(key, value)
-
-    elif cmd == "setup-reminder":
-        cmd_setup_reminder()
-
-    elif cmd == "reminder":
-        cmd_reminder()
-
-    elif cmd == "weekly-report":
-        cmd_weekly_report()
-
-    elif cmd == "check-reminder":
-        cmd_check_reminder()
-
-    elif cmd == "switch-channel":
-        cmd_switch_channel()
-
+    func = dispatch.get(cmd)
+    if func:
+        func(cmd_args)
     else:
         print(f"Unknown command: {cmd}")
         print("Run 'srs.py help' for usage.")

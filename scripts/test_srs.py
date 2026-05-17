@@ -1127,15 +1127,15 @@ class TestCLICommands(TestCase):
     def test_cmd_init_creates_topic_dir(self):
         """Test that cmd_init creates topic directory."""
         from srs import cmd_init
-        cmd_init("test_topic")
+        cmd_init(["test_topic"])
         topic_dir = srs.TOPICS_DIR / "test_topic"
         self.assertTrue(topic_dir.exists())
 
     def test_cmd_add_creates_concept(self):
         """Test that cmd_add creates concept file."""
         from srs import cmd_init, cmd_add
-        cmd_init("test_topic")
-        cmd_add("test_topic", "test_concept")
+        cmd_init(["test_topic"])
+        cmd_add(["test_topic", "test_concept"])
         concepts_file = srs.TOPICS_DIR / "test_topic" / "concepts.json"
         self.assertTrue(concepts_file.exists())
         with open(concepts_file) as f:
@@ -1145,38 +1145,38 @@ class TestCLICommands(TestCase):
     def test_cmd_due_returns_due_concepts(self):
         """Test that cmd_due returns due concepts."""
         from srs import cmd_init, cmd_add, cmd_due
-        cmd_init("test_topic")
-        cmd_add("test_topic", "test_concept")
+        cmd_init(["test_topic"])
+        cmd_add(["test_topic", "test_concept"])
         # This should not raise an exception
-        cmd_due()
+        cmd_due([])
 
     def test_cmd_status_shows_overview(self):
         """Test that cmd_status shows overview."""
         from srs import cmd_init, cmd_add, cmd_status
-        cmd_init("test_topic")
-        cmd_add("test_topic", "test_concept")
+        cmd_init(["test_topic"])
+        cmd_add(["test_topic", "test_concept"])
         # This should not raise an exception
-        cmd_status()
+        cmd_status([])
 
     def test_cmd_status_topic_shows_topic_detail(self):
         """Test that cmd_status <topic> shows topic detail."""
         from srs import cmd_init, cmd_add, cmd_status
-        cmd_init("test_topic")
-        cmd_add("test_topic", "test_concept")
+        cmd_init(["test_topic"])
+        cmd_add(["test_topic", "test_concept"])
         # This should not raise an exception
-        cmd_status("test_topic")
+        cmd_status(["test_topic"])
 
     def test_cmd_config_shows_config(self):
         """Test that cmd_config shows config."""
         from srs import cmd_config
         # This should not raise an exception
-        cmd_config()
+        cmd_config([])
 
     def test_cmd_config_set_updates_value(self):
         """Test that cmd_config set updates value."""
         from srs import cmd_config
-        # cmd_config(key, value) - "set" is handled in main(), not cmd_config
-        cmd_config("learning_depth", "deep")
+        # "set" subcommand is now handled inside cmd_config
+        cmd_config(["set", "learning_depth", "deep"])
 
 
 class TestCalcOverdue(TestCase):
@@ -1347,18 +1347,18 @@ class TestRateCommand(TestCase):
 
     def test_rate_easy_increases_interval(self):
         from srs import cmd_init, cmd_add, cmd_rate
-        cmd_init("t")
-        cmd_add("t", "c1")
-        cmd_rate("t", "c1", "easy")
+        cmd_init(["t"])
+        cmd_add(["t", "c1"])
+        cmd_rate(["t", "c1", "easy"])
         concepts = srs.load_concepts("t")
         self.assertGreater(concepts["c1"]["interval_days"], 1)
 
     def test_rate_wrong_resets_interval(self):
         from srs import cmd_init, cmd_add, cmd_rate
-        cmd_init("t")
-        cmd_add("t", "c1")
-        cmd_rate("t", "c1", "good")
-        cmd_rate("t", "c1", "wrong")
+        cmd_init(["t"])
+        cmd_add(["t", "c1"])
+        cmd_rate(["t", "c1", "good"])
+        cmd_rate(["t", "c1", "wrong"])
         concepts = srs.load_concepts("t")
         self.assertEqual(concepts["c1"]["interval_days"], 1)
 
@@ -1366,11 +1366,11 @@ class TestRateCommand(TestCase):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add, cmd_rate
-        cmd_init("t")
-        cmd_add("t", "c1")
+        cmd_init(["t"])
+        cmd_add(["t", "c1"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_rate("t", "c1", "invalid")
+            cmd_rate(["t", "c1", "invalid"])
         self.assertIn("Error", f.getvalue())
 
     def test_rate_path_traversal_rejected(self):
@@ -1379,7 +1379,7 @@ class TestRateCommand(TestCase):
         from srs import cmd_rate
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_rate("../../etc/passwd", "c1", "easy")
+            cmd_rate(["../../etc/passwd", "c1", "easy"])
         self.assertIn("Error", f.getvalue())
 
 
@@ -1634,7 +1634,7 @@ class TestCmdInitPathTraversal(TestCase):
         from srs import cmd_init
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_init("../evil")
+            cmd_init(["../evil"])
         output = f.getvalue()
         self.assertIn("Error", output)
         # Should not create directory outside TOPICS_DIR
@@ -1647,7 +1647,7 @@ class TestCmdInitPathTraversal(TestCase):
         from srs import cmd_init
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_init("test/evil")
+            cmd_init(["test/evil"])
         self.assertIn("Error", f.getvalue())
 
 
@@ -1669,40 +1669,40 @@ class TestCmdAddConceptValidation(TestCase):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add
-        cmd_init("t")
+        cmd_init(["t"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_add("t", "../evil")
+            cmd_add(["t", "../evil"])
         self.assertIn("Error", f.getvalue())
 
     def test_rejects_spaces_in_concept(self):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add
-        cmd_init("t")
+        cmd_init(["t"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_add("t", "bad concept")
+            cmd_add(["t", "bad concept"])
         self.assertIn("Error", f.getvalue())
 
     def test_rejects_too_long_concept(self):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add
-        cmd_init("t")
+        cmd_init(["t"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_add("t", "a" * 201)
+            cmd_add(["t", "a" * 201])
         self.assertIn("Error", f.getvalue())
 
     def test_accepts_valid_concept(self):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add
-        cmd_init("t")
+        cmd_init(["t"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_add("t", "valid-concept")
+            cmd_add(["t", "valid-concept"])
         self.assertIn("OK", f.getvalue())
 
 
@@ -1728,33 +1728,33 @@ class TestCmdRateConceptValidation(TestCase):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add, cmd_rate
-        cmd_init("t")
-        cmd_add("t", "c1")
+        cmd_init(["t"])
+        cmd_add(["t", "c1"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_rate("t", "../evil", "easy")
+            cmd_rate(["t", "../evil", "easy"])
         self.assertIn("Error", f.getvalue())
 
     def test_rejects_spaces_in_concept(self):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add, cmd_rate
-        cmd_init("t")
-        cmd_add("t", "c1")
+        cmd_init(["t"])
+        cmd_add(["t", "c1"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_rate("t", "bad concept", "easy")
+            cmd_rate(["t", "bad concept", "easy"])
         self.assertIn("Error", f.getvalue())
 
     def test_rejects_too_long_concept(self):
         import io
         from contextlib import redirect_stdout
         from srs import cmd_init, cmd_add, cmd_rate
-        cmd_init("t")
-        cmd_add("t", "c1")
+        cmd_init(["t"])
+        cmd_add(["t", "c1"])
         f = io.StringIO()
         with redirect_stdout(f):
-            cmd_rate("t", "a" * 201, "easy")
+            cmd_rate(["t", "a" * 201, "easy"])
         self.assertIn("Error", f.getvalue())
 
 
@@ -2075,7 +2075,7 @@ class TestReminderCommands(TestCase):
         from unittest.mock import patch
         with self._mock_paths():
             with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                srs.cmd_reminder()
+                srs.cmd_reminder([])
             output = json.loads(mock_out.getvalue())
             self.assertEqual(output["total_due"], 0)
             self.assertEqual(output["topics"], [])
@@ -2104,7 +2104,7 @@ class TestReminderCommands(TestCase):
             json.dump(concepts, f)
         with self._mock_paths():
             with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                srs.cmd_reminder()
+                srs.cmd_reminder([])
             output = json.loads(mock_out.getvalue())
             self.assertEqual(output["total_due"], 1)
             self.assertEqual(output["topics"][0]["name"], "test-topic")
@@ -2120,7 +2120,7 @@ class TestReminderCommands(TestCase):
             json.dump(log, f)
         with self._mock_paths():
             with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                srs.cmd_reminder()
+                srs.cmd_reminder([])
             output = json.loads(mock_out.getvalue())
             self.assertEqual(output["risk"], "critical")
 
@@ -2133,7 +2133,7 @@ class TestReminderCommands(TestCase):
             json.dump(log, f)
         with self._mock_paths():
             with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                srs.cmd_reminder()
+                srs.cmd_reminder([])
             output = json.loads(mock_out.getvalue())
             self.assertEqual(output["risk"], "none")
 
@@ -2143,7 +2143,7 @@ class TestReminderCommands(TestCase):
         from unittest.mock import patch
         with self._mock_paths():
             with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                srs.cmd_weekly_report()
+                srs.cmd_weekly_report([])
             output = json.loads(mock_out.getvalue())
             self.assertEqual(output["learning_days"], 0)
             self.assertEqual(output["total_actions"], 0)
@@ -2166,7 +2166,7 @@ class TestReminderCommands(TestCase):
             json.dump({}, f)
         with self._mock_paths():
             with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                srs.cmd_weekly_report()
+                srs.cmd_weekly_report([])
             output = json.loads(mock_out.getvalue())
             self.assertEqual(output["learning_days"], 1)
             self.assertEqual(output["total_actions"], 2)
@@ -2184,7 +2184,7 @@ class TestReminderCommands(TestCase):
                     'stderr': ''
                 })()
                 with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                    srs.cmd_check_reminder()
+                    srs.cmd_check_reminder([])
                 output = mock_out.getvalue()
                 self.assertIn('NOT ENABLED', output)
 
@@ -2204,7 +2204,7 @@ class TestReminderCommands(TestCase):
                     'stderr': ''
                 })()
                 with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                    srs.cmd_check_reminder()
+                    srs.cmd_check_reminder([])
                 output = mock_out.getvalue()
                 self.assertIn('ENABLED', output)
                 self.assertIn('08:30', output)
@@ -2227,7 +2227,7 @@ class TestReminderCommands(TestCase):
                     'stderr': ''
                 })()
                 with patch('sys.stdout', new_callable=StringIO) as mock_out:
-                    srs.cmd_setup_reminder()
+                    srs.cmd_setup_reminder([])
                 output = mock_out.getvalue()
                 self.assertIn('Invalid', output)
                 self.assertIn('09:00', output)
