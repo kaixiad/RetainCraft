@@ -450,16 +450,64 @@ def check_session(topic: str | None = None, stale_minutes: int = 120) -> dict[st
     }
 
 
+def _calc_accuracy_trend(recent: list[dict[str, Any]]) -> str:
+    """Calculate accuracy trend by comparing first-half vs second-half averages."""
+    mid = len(recent) // 2
+    if mid == 0:
+        return "stable"
+    first_half_avg = sum(t["accuracy"] for t in recent[:mid]) / mid
+    second_half_avg = sum(t["accuracy"] for t in recent[mid:]) / (len(recent) - mid)
+    diff = second_half_avg - first_half_avg
+    if diff < -0.1:
+        return "declining"
+    elif diff > 0.1:
+        return "improving"
+    return "stable"
+
+
+def _count_consecutive_low(recent: list[dict[str, Any]], threshold: float = 0.5) -> int:
+    """Count consecutive tests below threshold from the end."""
+    count = 0
+    for t in reversed(recent):
+        if t["accuracy"] < threshold:
+            count += 1
+        else:
+            break
+    return count
+
+
+def _assess_burnout_risk(consecutive_low: int, trend: str, avg_accuracy: float) -> str:
+    """Determine burnout risk level from metrics."""
+    if consecutive_low >= 3 or (trend == "declining" and avg_accuracy < 0.4):
+        return "high"
+    elif consecutive_low >= 2 or (trend == "declining" and avg_accuracy < 0.6):
+        return "medium"
+    return "low"
+
+
+def _get_burnout_suggestions(risk: str) -> list[str]:
+    """Generate suggestions based on burnout risk level."""
+    if risk == "high":
+        return [
+            "休息至少 30 分钟后再继续学习。",
+            "复习已掌握的概念以重建信心。",
+            "考虑暂时切换到其他主题。",
+        ]
+    elif risk == "medium":
+        return [
+            "缩短下次学习时长。",
+            "专注复习薄弱点，不要学新内容。",
+            "如果感到疲劳，休息 10-15 分钟。",
+        ]
+    return []
+
+
 def check_burnout(topic: str, window: int = 5) -> dict[str, Any]:
     """
     Analyze burnout risk for a topic based on recent test trends.
 
-    Looks at the last *window* tests and computes:
-      - accuracy trend (declining / stable / improving)
-      - consecutive below-50% tests
-      - average accuracy over the window
-
-    Returns a structured burnout assessment.
+    Design intent: Delegates trend/risk/suggestion calculation to helpers
+    so each concern is isolated and testable.
 
     Args:
         topic: Topic name to analyze
@@ -479,53 +527,11 @@ def check_burnout(topic: str, window: int = 5) -> dict[str, Any]:
         }
 
     recent = history[-window:]
-
-    # Calculate trend (compare first half avg vs second half avg)
-    mid = len(recent) // 2
-    if mid == 0:
-        first_half_avg = recent[0]["accuracy"]
-        second_half_avg = recent[0]["accuracy"]
-    else:
-        first_half_avg = sum(t["accuracy"] for t in recent[:mid]) / mid
-        second_half_avg = (
-            sum(t["accuracy"] for t in recent[mid:]) / (len(recent) - mid)
-        )
-
-    diff = second_half_avg - first_half_avg
-    if diff < -0.1:
-        trend = "declining"
-    elif diff > 0.1:
-        trend = "improving"
-    else:
-        trend = "stable"
-
-    # Count consecutive below-50% tests from the end
-    consecutive_low = 0
-    for t in reversed(recent):
-        if t["accuracy"] < 0.5:
-            consecutive_low += 1
-        else:
-            break
-
+    trend = _calc_accuracy_trend(recent)
+    consecutive_low = _count_consecutive_low(recent)
     avg_accuracy = sum(t["accuracy"] for t in recent) / len(recent)
-
-    # Burnout risk level
-    if consecutive_low >= 3 or (trend == "declining" and avg_accuracy < 0.4):
-        risk = "high"
-    elif consecutive_low >= 2 or (trend == "declining" and avg_accuracy < 0.6):
-        risk = "medium"
-    else:
-        risk = "low"
-
-    suggestions = []
-    if risk == "high":
-        suggestions.append("休息至少 30 分钟后再继续学习。")
-        suggestions.append("复习已掌握的概念以重建信心。")
-        suggestions.append("考虑暂时切换到其他主题。")
-    elif risk == "medium":
-        suggestions.append("缩短下次学习时长。")
-        suggestions.append("专注复习薄弱点，不要学新内容。")
-        suggestions.append("如果感到疲劳，休息 10-15 分钟。")
+    risk = _assess_burnout_risk(consecutive_low, trend, avg_accuracy)
+    suggestions = _get_burnout_suggestions(risk)
 
     return {
         "status": "ok",
@@ -687,52 +693,22 @@ def compare_profile_with_job(job_title: str) -> dict[str, Any]:
     }
 
 
-def calc_level_by_accuracy(topic: str, concepts_fallback: dict[str, Any] | None = None) -> tuple[str, str, str]:
+_LEVEL_MAP = {
+    "L1": ("L1", "入门 (Novice)", "[L1]"),
+    "L2": ("L2", "初学 (Beginner)", "[L2]"),
+    "L3": ("L3", "进阶 (Intermediate)", "[L3]"),
+    "L4": ("L4", "熟练 (Proficient)", "[L4]"),
+    "L5": ("L5", "精通 (Mastery)", "[L5]"),
+}
+
+
+def _calc_upgrade_level(history: list[dict[str, Any]], level_thresholds: dict[str, float]) -> int:
     """
-    Calculate level based on test accuracy (not SM-2 mastery).
-    
-    Args:
-        topic: Topic name
-        concepts_fallback: Optional concepts dictionary for fallback calculation
-    
-    Returns:
-        Tuple of (level_code, level_name, level_emoji)
-    
-    算法说明：
-    1. 初始等级为L1
-    2. 前2次测试平均答对率 >= 20% → 升级到L2
-    3. 遍历所有相邻测试对，检查是否满足下一级阈值：
-       - L2→L3: 连续2次 >= 40%
-       - L3→L4: 连续2次 >= 70%
-       - L4→L5: 连续2次 >= 90%
-    4. 每次匹配成功只升一级，不能跳级
-    5. 降级检查：如果最近3次测试都低于当前等级阈值，则降一级
-    6. 最低降到L2，L1只在无测试历史时触发
+    Calculate level by walking through test pairs for tiered upgrades.
+
+    Design intent: Isolate upgrade logic so it's independently testable.
+    No-skip rule: can only upgrade one level per adjacent test pair.
     """
-    history = load_test_history().get(topic, [])
-
-    # 从 config.json 读取等级阈值
-    config = load_config()
-    level_thresholds = config["level_thresholds"]
-
-    if len(history) == 0:
-        if concepts_fallback:
-            _, _, pct = calc_mastery_overview(concepts_fallback)
-            if pct >= 0.9:
-                return "L4", "熟练 (Proficient)", "[L4]"
-            elif pct >= 0.5:
-                return "L3", "进阶 (Intermediate)", "[L3]"
-            elif pct >= 0.2:
-                return "L2", "初学 (Beginner)", "[L2]"
-        return "L1", "入门 (Novice)", "[L1]"
-
-    if len(history) == 1:
-        avg = history[0]["accuracy"]
-        if avg >= level_thresholds["L2"]:
-            return "L2", "初学 (Beginner)", "[L2]"
-        return "L1", "入门 (Novice)", "[L1]"
-
-    # --- Tiered upgrade: walk through test pairs from L1 ---
     level = 1
     first_avg = sum(h["accuracy"] for h in history[:2]) / 2
     if first_avg >= level_thresholds["L2"]:
@@ -743,34 +719,71 @@ def calc_level_by_accuracy(topic: str, concepts_fallback: dict[str, Any] | None 
     for i in range(len(history) - 1):
         if next_level > 5:
             break
-        pair = history[i:i+2]
+        pair = history[i:i + 2]
         threshold = thresholds[next_level]
-        # Only upgrade if current level is at least next_level - 1 (no skipping)
         if all(h["accuracy"] >= threshold for h in pair) and level >= next_level - 1:
             level = next_level
             next_level += 1
+    return level
 
-    # --- Demotion check ---
-    # Maintain thresholds: L2=0.2, L3=0.4, L4=0.7, L5=0.9
-    # Demotion check: only demote ONE level per check (gradual degradation)
-    # SM-2 principle: incorrect answers reset interval but don't skip stages
-    # Ebbinghaus: forgetting is continuous, not stepwise
-    maintain_thresholds = {2: level_thresholds["L2"], 3: level_thresholds["L3"], 4: level_thresholds["L4"], 5: level_thresholds["L5"]}
 
+def _check_demotion(level: int, history: list[dict[str, Any]], level_thresholds: dict[str, float]) -> int:
+    """
+    Check if level should be demoted based on recent performance.
+
+    Design intent: Gradual degradation — only demote one level per check.
+    SM-2 principle: incorrect answers reset interval but don't skip stages.
+    """
     if level >= 3 and len(history) >= 3:
+        maintain_thresholds = {
+            2: level_thresholds["L2"], 3: level_thresholds["L3"],
+            4: level_thresholds["L4"], 5: level_thresholds["L5"],
+        }
         threshold = maintain_thresholds[level]
         last3 = history[-3:]
         if all(h["accuracy"] < threshold for h in last3):
-            level -= 1  # demote one level only
+            return level - 1
+    return level
 
-    level_map = {
-        "L1": ("L1", "入门 (Novice)", "[L1]"),
-        "L2": ("L2", "初学 (Beginner)", "[L2]"),
-        "L3": ("L3", "进阶 (Intermediate)", "[L3]"),
-        "L4": ("L4", "熟练 (Proficient)", "[L4]"),
-        "L5": ("L5", "精通 (Mastery)", "[L5]")
-    }
-    return level_map.get(f"L{level}", level_map["L1"])
+
+def calc_level_by_accuracy(topic: str, concepts_fallback: dict[str, Any] | None = None) -> tuple[str, str, str]:
+    """
+    Calculate level based on test accuracy (not SM-2 mastery).
+
+    Design intent: Delegates upgrade/demotion to helpers for clarity.
+    Fallback to mastery overview when no test history exists.
+
+    算法说明：
+    1. 初始等级为L1
+    2. 前2次测试平均答对率 >= 20% → 升级到L2
+    3. 遍历所有相邻测试对，检查是否满足下一级阈值（不跳级）
+    4. 降级检查：最近3次都低于阈值则降一级
+    """
+    history = load_test_history().get(topic, [])
+    config = load_config()
+    level_thresholds = config["level_thresholds"]
+
+    if len(history) == 0:
+        if concepts_fallback:
+            _, _, pct = calc_mastery_overview(concepts_fallback)
+            if pct >= 0.9:
+                return _LEVEL_MAP["L4"]
+            elif pct >= 0.5:
+                return _LEVEL_MAP["L3"]
+            elif pct >= 0.2:
+                return _LEVEL_MAP["L2"]
+        return _LEVEL_MAP["L1"]
+
+    if len(history) == 1:
+        avg = history[0]["accuracy"]
+        if avg >= level_thresholds["L2"]:
+            return _LEVEL_MAP["L2"]
+        return _LEVEL_MAP["L1"]
+
+    level = _calc_upgrade_level(history, level_thresholds)
+    level = _check_demotion(level, history, level_thresholds)
+
+    return _LEVEL_MAP.get(f"L{level}", _LEVEL_MAP["L1"])
 
 
 def calc_mastery_overview(concepts: dict[str, Any]) -> tuple[int, int, float]:
@@ -1190,12 +1203,78 @@ def cmd_rate(args: list[str]) -> None:
     print(f"[OK] Rated '{concept_name}' as '{rating}'. Next review: {updated['next_review']}")
 
 
+def _find_due_concepts(concepts: dict[str, Any], today_str: str) -> list[tuple[str, dict[str, Any]]]:
+    """Find concepts due for review today. Returns sorted list of (name, concept)."""
+    due = []
+    for name, c in concepts.items():
+        if c["next_review"] and c["next_review"] <= today_str:
+            due.append((name, c))
+    return due
+
+
+def _print_no_due_message(concepts: dict[str, Any]) -> None:
+    """Print message when no reviews are due, including next review date if available."""
+    next_dates = []
+    for name, c in concepts.items():
+        if c["next_review"]:
+            next_dates.append((c["next_review"], name))
+    if next_dates:
+        next_dates.sort()
+        print(f"   Next review: {next_dates[0][0]} ({next_dates[0][1]})")
+
+
+def _run_review_loop(
+    due: list[tuple[str, dict[str, Any]]],
+    concepts: dict[str, Any],
+    burnout_threshold: int,
+) -> int:
+    """
+    Run the interactive review loop. Returns number of concepts reviewed.
+
+    Design intent: Isolate the interactive state machine from data loading.
+    """
+    consecutive_wrong = 0
+    reviewed = 0
+
+    for name, c in due:
+        if consecutive_wrong >= burnout_threshold:
+            print(f"\n[WARNING] Burnout detected ({consecutive_wrong} consecutive wrong).")
+            print("   Consider taking a break or switching to easier material.")
+            resp = input("   Continue anyway? (y/n): ").strip().lower()
+            if resp != "y":
+                break
+            consecutive_wrong = 0
+
+        mastery = get_mastery_emoji(c["mastery"])
+        accuracy = get_accuracy_str(c)
+        print(f"\n{'='*50}")
+        print(f"  {mastery} {name}")
+        print(f"  Reviews: {c['reviews']} | Accuracy: {accuracy} | Interval: {c['interval_days']}d")
+        print(f"{'='*50}")
+        print("  (In interactive mode, AI助手 would quiz you on this concept)")
+
+        while True:
+            rating = input("  Rate [easy/good/hard/wrong]: ").strip().lower()
+            if rating in ("easy", "good", "hard", "wrong", "quit"):
+                break
+            print("  Invalid. Use: easy, good, hard, wrong, or quit")
+
+        if rating == "quit":
+            print("\nSession ended early.")
+            break
+
+        concepts[name] = calc_next_review(c, rating)
+        reviewed += 1
+        consecutive_wrong = consecutive_wrong + 1 if rating == "wrong" else 0
+
+    return reviewed
+
+
 def cmd_review(args: list[str]) -> None:
     """
     Start a review session for a topic.
 
-    Design intent: Accept raw args list so main() dispatch is uniform.
-    Interactive session — prompts user for ratings via stdin.
+    Design intent: Orchestrates data loading, due-finding, and review loop.
     """
     if len(args) < 1:
         print("Usage: srs.py review <topic>")
@@ -1215,22 +1294,10 @@ def cmd_review(args: list[str]) -> None:
     limit = config.get("daily_review_limit", 20)
     burnout_threshold = config.get("burnout_threshold", 3)
 
-    # Find due concepts
-    today_str = today()
-    due = []
-    for name, c in concepts.items():
-        if c["next_review"] and c["next_review"] <= today_str:
-            due.append((name, c))
-
+    due = _find_due_concepts(concepts, today())
     if not due:
         print(f"[OK] No reviews due today for '{topic}'.")
-        next_dates = []
-        for name, c in concepts.items():
-            if c["next_review"]:
-                next_dates.append((c["next_review"], name))
-        if next_dates:
-            next_dates.sort()
-            print(f"   Next review: {next_dates[0][0]} ({next_dates[0][1]})")
+        _print_no_due_message(concepts)
         return
 
     due = due[:limit]
@@ -1239,49 +1306,7 @@ def cmd_review(args: list[str]) -> None:
     print(f"   Rate each: easy / good / hard / wrong")
     print(f"   Type 'quit' to stop early\n")
 
-    consecutive_wrong = 0
-    reviewed = 0
-
-    for name, c in due:
-        # Burnout check
-        if consecutive_wrong >= burnout_threshold:
-            print(f"\n[WARNING] Burnout detected ({consecutive_wrong} consecutive wrong).")
-            print(f"   Consider taking a break or switching to easier material.")
-            resp = input("   Continue anyway? (y/n): ").strip().lower()
-            if resp != "y":
-                break
-            consecutive_wrong = 0
-
-        mastery = get_mastery_emoji(c["mastery"])
-        accuracy = get_accuracy_str(c)
-        print(f"\n{'='*50}")
-        print(f"  {mastery} {name}")
-        print(f"  Reviews: {c['reviews']} | Accuracy: {accuracy} | Interval: {c['interval_days']}d")
-        print(f"{'='*50}")
-
-        # In a real session, the AI would ask questions here.
-        # For the CLI, we just do the rating.
-        print(f"  (In interactive mode, AI助手 would quiz you on this concept)")
-
-        while True:
-            rating = input(f"  Rate [easy/good/hard/wrong]: ").strip().lower()
-            if rating in ("easy", "good", "hard", "wrong", "quit"):
-                break
-            print(f"  Invalid. Use: easy, good, hard, wrong, or quit")
-
-        if rating == "quit":
-            print("\nSession ended early.")
-            break
-
-        # Update concept
-        concepts[name] = calc_next_review(c, rating)
-        reviewed += 1
-
-        if rating == "wrong":
-            consecutive_wrong += 1
-        else:
-            consecutive_wrong = 0
-
+    reviewed = _run_review_loop(due, concepts, burnout_threshold)
     save_concepts(topic, concepts)
     print(f"\n[OK] Reviewed {reviewed} concept(s). Progress saved.")
 
@@ -1327,52 +1352,33 @@ def cmd_due(args: list[str]) -> None:
         print(f"     {mastery} {name} [acc: {accuracy}, int: {c['interval_days']}d]{overdue_str}")
 
 
-def cmd_status(args: list[str]) -> None:
-    """
-    Show learning status.
+def _show_topic_status(topic: str, concepts: dict[str, Any]) -> None:
+    """Display status for a single topic. Called by cmd_status."""
+    level_code, level_name, level_emoji = calc_level(concepts, topic=topic)
+    mastered = sum(1 for c in concepts.values() if c["mastery"] == "mastered")
+    reviewing = sum(1 for c in concepts.values() if c["mastery"] == "reviewing")
+    learning = sum(1 for c in concepts.values() if c["mastery"] == "learning")
+    unseen = sum(1 for c in concepts.values() if c["mastery"] == "unseen")
+    total = len(concepts)
 
-    Design intent: Accept raw args list so main() dispatch is uniform.
-    Optional topic argument shows topic-specific status.
-    """
-    ensure_dirs()
-    topic = args[0] if args else None
+    print(f"\n[STATUS] {topic} Status:\n")
+    print(f"  等级:{level_emoji} {level_code} {level_name}")
+    print()
+    print(f"  [MASTERED] Mastered:  {mastered}/{total}")
+    print(f"  [REVIEWING] Reviewing: {reviewing}/{total}")
+    print(f"  [LEARNING] Learning:  {learning}/{total}")
+    print(f"  [UNSEEN] Unseen:    {unseen}/{total}")
 
-    if topic:
-        try:
-            topic = sanitize_topic(topic)
-        except SanitizeError as e:
-            print(f"Error: {e}")
-            return
-        concepts = load_concepts(topic)
-        if not concepts:
-            print(f"No concepts in '{topic}'.")
-            return
+    print("\n  Concepts:")
+    for name, c in concepts.items():
+        mastery = get_mastery_emoji(c["mastery"])
+        accuracy = get_accuracy_str(c)
+        print(f"    {mastery} {name:30s} | acc: {accuracy:4s} | int: {c['interval_days']:3d}d | next: {c['next_review']}")
 
-        # Use authoritative level from test_history if available
-        level_code, level_name, level_emoji = calc_level(concepts, topic=topic)
-        mastered = sum(1 for c in concepts.values() if c["mastery"] == "mastered")
-        reviewing = sum(1 for c in concepts.values() if c["mastery"] == "reviewing")
-        learning = sum(1 for c in concepts.values() if c["mastery"] == "learning")
-        unseen = sum(1 for c in concepts.values() if c["mastery"] == "unseen")
-        total = len(concepts)
 
-        print(f"\n[STATUS] {topic} Status:\n")
-        print(f"  等级:{level_emoji} {level_code} {level_name}")
-        print()
-        print(f"  [MASTERED] Mastered:  {mastered}/{total}")
-        print(f"  [REVIEWING] Reviewing: {reviewing}/{total}")
-        print(f"  [LEARNING] Learning:  {learning}/{total}")
-        print(f"  [UNSEEN] Unseen:    {unseen}/{total}")
-
-        print(f"\n  Concepts:")
-        for name, c in concepts.items():
-            mastery = get_mastery_emoji(c["mastery"])
-            accuracy = get_accuracy_str(c)
-            print(f"    {mastery} {name:30s} | acc: {accuracy:4s} | int: {c['interval_days']:3d}d | next: {c['next_review']}")
-        return
-
-    # Overall status
-    print(f"\n[STATUS] Overall Learning Status:\n")
+def _show_overall_status() -> None:
+    """Display overall learning status across all topics. Called by cmd_status."""
+    print("\n[STATUS] Overall Learning Status:\n")
 
     total_concepts = 0
     total_mastered = 0
@@ -1401,6 +1407,31 @@ def cmd_status(args: list[str]) -> None:
         pct = total_mastered / total_concepts * 100
         print(f"\n  Total: {total_mastered}/{total_concepts} mastered ({pct:.0f}%)")
         print(f"  Due today: {total_due}")
+
+
+def cmd_status(args: list[str]) -> None:
+    """
+    Show learning status.
+
+    Design intent: Delegates to _show_topic_status or _show_overall_status
+    based on whether a topic argument is provided.
+    """
+    ensure_dirs()
+    topic = args[0] if args else None
+
+    if topic:
+        try:
+            topic = sanitize_topic(topic)
+        except SanitizeError as e:
+            print(f"Error: {e}")
+            return
+        concepts = load_concepts(topic)
+        if not concepts:
+            print(f"No concepts in '{topic}'.")
+            return
+        _show_topic_status(topic, concepts)
+    else:
+        _show_overall_status()
 
 
 def cmd_config(args: list[str]) -> None:
