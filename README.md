@@ -17,7 +17,7 @@ Not "here's some material, figure it out yourself" — your AI studies with you,
 ## Features
 
 - **5 evidence-based methods** in one protocol: spaced repetition (d=0.85), active recall (d=0.74), Feynman technique (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants)
-- **SM-2 + FSRS-5 spaced repetition**: auto-calculates review intervals using SM-2 or FSRS-5 (IEEE TKDE 2023), switchable via config
+- **FSRS-5 spaced repetition (default)**: ML-based scheduling from IEEE TKDE 2023 research, with SM-2 as fallback. Personalizable via `optimize-params` after 1000+ reviews
 - **Pre-assessment + module tests**: quantifies learning with before/after comparison
 - **Reminder system**: daily learning plans + weekly reports via cron, auto-detects notification channel
 - **Learning contract**: "If X happens, I will do Y" format based on implementation intentions (Gollwitzer 1999)
@@ -143,12 +143,13 @@ python3 scripts/srs.py switch-channel            # Switch reminder notification 
 
 # Config
 python3 scripts/srs.py config                    # View/set configuration
-python3 scripts/srs.py config set algorithm fsrs # Switch to FSRS-5 algorithm
+python3 scripts/srs.py config set algorithm sm2  # Switch to SM-2 algorithm (FSRS-5 is default)
 
 # v1.3.0 New
 python3 scripts/srs.py today                     # Today's learning plan with overdue analysis
 python3 scripts/srs.py streak                    # Consecutive learning days
 python3 scripts/srs.py analyze                   # Learning trends and weak concepts
+python3 scripts/srs.py optimize-params           # Personalize FSRS-5 weights (needs 1000+ reviews)
 ```
 
 ## Academic References

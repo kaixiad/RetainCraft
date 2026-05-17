@@ -18,7 +18,7 @@
 ## 核心特性
 
 - **5 种循证方法**整合在一个协议中：间隔重复（d=0.85）、主动回忆（d=0.74）、费曼学习法（d=0.54）、交错练习（d=0.47）、精细加工提问（d=0.56）——效果量均来自 [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) 元分析（242 项研究，16.9 万参与者）
-- **SM-2 间隔重复**：自动计算复习间隔，不是固定时间表
+- **FSRS-5 间隔重复（默认）**：基于 IEEE TKDE 2023 的 ML 调度算法，SM-2 作为备选。积累 1000+ 次复习后可通过 `optimize-params` 个性化参数
 - **摸底考试 + 模块测试**：学前学后对比，量化学习效果
 - **提醒系统**：每日学习计划 + 周报，通过 cron 定时触发，自动检测通知渠道
 - **学习契约**：基于实施意图理论（Gollwitzer 1999）的「如果 X 情况发生，我会做 Y 行动」格式
@@ -144,6 +144,13 @@ python3 scripts/srs.py switch-channel            # 切换提醒通知渠道
 
 # 配置
 python3 scripts/srs.py config                    # 查看/设置配置
+python3 scripts/srs.py config set algorithm sm2  # 切换到 SM-2 算法（默认 FSRS-5）
+
+# v1.3.0 新增
+python3 scripts/srs.py today                     # 今日学习计划（含逾期分析）
+python3 scripts/srs.py streak                    # 连续学习天数
+python3 scripts/srs.py analyze                   # 学习趋势和薄弱概念
+python3 scripts/srs.py optimize-params           # 个性化 FSRS-5 参数（需 1000+ 次复习）
 ```
 
 ## 学术引用

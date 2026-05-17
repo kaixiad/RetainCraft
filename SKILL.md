@@ -3,7 +3,7 @@ name: retaincraft
 description: >
   AI learning assistant with spaced repetition, active recall, Feynman technique,
   and study planning. Helps you memorize, review, and master any subject.
-  Features: SM-2 + FSRS-5 spaced repetition, forgetting curve alerts, burnout detection,
+  Features: FSRS-5 spaced repetition (default, ML-based), SM-2 fallback, forgetting curve alerts, burnout detection,
   learning contracts, weekly reports, module tests, progress tracking.
   基于循证学习科学的 AI 辅助学习协议：间隔重复、主动回忆、费曼学习法、
   交错练习、精细加工提问。帮助你记忆、复习、掌握任何学科。
