@@ -1630,6 +1630,106 @@ def cmd_today(args: list[str]) -> None:
         print("  [TIP] All concepts are on time. Keep up the good work!")
 
 
+def cmd_streak(args: list[str]) -> None:
+    """
+    Show consecutive learning days streak.
+
+    Design intent: Uses learning_log.json to count consecutive days
+    with at least one learning activity.
+    """
+    log = load_learning_log()
+    if not log:
+        print("\n[STREAK] No learning activity recorded yet. Start learning today!")
+        return
+
+    # Extract unique dates from log
+    dates = sorted(set(entry["timestamp"][:10] for entry in log), reverse=True)
+
+    # Count streak from today backwards
+    today_str = today()
+    streak = 0
+    check_date = datetime.now()
+
+    for _ in range(len(dates)):
+        date_str = check_date.strftime("%Y-%m-%d")
+        if date_str in dates:
+            streak += 1
+            check_date -= timedelta(days=1)
+        else:
+            break
+
+    print(f"\n[STREAK] Learning Streak\n")
+    print(f"  Current streak: {streak} day(s)")
+    print(f"  Total active days: {len(dates)}")
+    if dates:
+        print(f"  Last activity: {dates[0]}")
+
+    if streak >= 7:
+        print(f"\n  [GREAT] 7+ day streak! Consistency is the key to mastery.")
+    elif streak >= 3:
+        print(f"\n  [GOOD] Keep going! Try to reach 7 days.")
+    elif streak > 0:
+        print(f"\n  [START] Good start! Build momentum.")
+
+
+def cmd_analyze(args: list[str]) -> None:
+    """
+    Analyze learning trends, weak concepts, and efficiency.
+
+    Design intent: Data-driven analysis using test_history and learning_log.
+    Shows actionable insights, not just raw data.
+    """
+    history = load_test_history()
+    log = load_learning_log()
+
+    if not history:
+        print("\n[ANALYZE] No test history available. Complete some tests first.")
+        return
+
+    print("\n[ANALYZE] Learning Analysis\n")
+
+    # Topic-level analysis
+    print("  Topic Performance:")
+    for topic, tests in history.items():
+        if not tests:
+            continue
+        recent = tests[-5:]
+        avg = sum(t["accuracy"] for t in recent) / len(recent)
+        trend = "↑" if len(tests) >= 2 and tests[-1]["accuracy"] > tests[-2]["accuracy"] else "↓" if len(tests) >= 2 and tests[-1]["accuracy"] < tests[-2]["accuracy"] else "→"
+        level_code, level_name, _ = calc_level_by_accuracy(topic)
+        print(f"    {topic:20s} | {level_code} | avg: {avg:.0%} {trend} | {len(tests)} tests")
+
+    # Weak concepts (overdue + low mastery)
+    print("\n  Weak Concepts (overdue or struggling):")
+    weak_count = 0
+    today_str = today()
+    for topic_dir in TOPICS_DIR.iterdir():
+        if not topic_dir.is_dir():
+            continue
+        concepts = load_concepts(topic_dir.name)
+        for name, c in concepts.items():
+            overdue = calc_overdue(c.get("next_review"))
+            if overdue > 3 or c.get("mastery") == "learning":
+                weak_count += 1
+                if weak_count <= 5:
+                    mastery = get_mastery_emoji(c.get("mastery", "unseen"))
+                    print(f"    {mastery} {topic_dir.name}/{name} (overdue: {overdue}d)")
+    if weak_count == 0:
+        print("    [OK] No weak concepts found!")
+    elif weak_count > 5:
+        print(f"    ... and {weak_count - 5} more")
+
+    # Activity summary
+    if log:
+        rate_actions = [e for e in log if e["action"] == "rate"]
+        test_actions = [e for e in log if e["action"] == "record-test"]
+        print(f"\n  Activity Summary:")
+        print(f"    Total ratings: {len(rate_actions)}")
+        print(f"    Total tests: {len(test_actions)}")
+        if rate_actions:
+            print(f"    Last rating: {rate_actions[-1]['timestamp'][:16]}")
+
+
 def _show_topic_status(topic: str, concepts: dict[str, Any]) -> None:
     """Display status for a single topic. Called by cmd_status."""
     level_code, level_name, level_emoji = calc_level(concepts, topic=topic)
@@ -2403,6 +2503,8 @@ def main() -> None:
         "rate": cmd_rate,
         "due": cmd_due,
         "today": cmd_today,
+        "streak": cmd_streak,
+        "analyze": cmd_analyze,
         "status": cmd_status,
         "record-test": cmd_record_test,
         "test-history": cmd_test_history,
