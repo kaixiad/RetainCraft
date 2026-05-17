@@ -3,12 +3,12 @@ name: retaincraft
 description: >
   AI learning assistant with spaced repetition, active recall, Feynman technique,
   and study planning. Helps you memorize, review, and master any subject.
-  Features: spaced repetition scheduler, forgetting curve alerts, burnout detection,
+  Features: SM-2 + FSRS-5 spaced repetition, forgetting curve alerts, burnout detection,
   learning contracts, weekly reports, module tests, progress tracking.
   基于循证学习科学的 AI 辅助学习协议：间隔重复、主动回忆、费曼学习法、
   交错练习、精细加工提问。帮助你记忆、复习、掌握任何学科。
   功能：间隔重复调度、遗忘曲线提醒、倦怠检测、学习契约、周报、模块测试、进度追踪。
-version: 1.2.0
+version: 1.3.0
 author: kaixiad
 license: MIT
 homepage: https://github.com/kaixiad/RetainCraft

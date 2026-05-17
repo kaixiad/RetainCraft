@@ -17,7 +17,7 @@ Not "here's some material, figure it out yourself" — your AI studies with you,
 ## Features
 
 - **5 evidence-based methods** in one protocol: spaced repetition (d=0.85), active recall (d=0.74), Feynman technique (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants)
-- **SM-2 spaced repetition**: auto-calculates review intervals, not fixed schedules
+- **SM-2 + FSRS-5 spaced repetition**: auto-calculates review intervals using SM-2 or FSRS-5 (IEEE TKDE 2023), switchable via config
 - **Pre-assessment + module tests**: quantifies learning with before/after comparison
 - **Reminder system**: daily learning plans + weekly reports via cron, auto-detects notification channel
 - **Learning contract**: "If X happens, I will do Y" format based on implementation intentions (Gollwitzer 1999)
@@ -88,7 +88,7 @@ retaincraft/
 │   └── docu-review-report.md   # Documentation audit report
 └── scripts/
     ├── srs.py                  # SM-2 spaced repetition engine + level system
-    ├── test_srs.py             # Unit tests (146 test cases)
+    ├── test_srs.py             # Unit tests (158 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
     ├── evidence.md             # Academic citations and effect sizes
     └── templates.md            # Output format templates
@@ -143,6 +143,12 @@ python3 scripts/srs.py switch-channel            # Switch reminder notification 
 
 # Config
 python3 scripts/srs.py config                    # View/set configuration
+python3 scripts/srs.py config set algorithm fsrs # Switch to FSRS-5 algorithm
+
+# v1.3.0 New
+python3 scripts/srs.py today                     # Today's learning plan with overdue analysis
+python3 scripts/srs.py streak                    # Consecutive learning days
+python3 scripts/srs.py analyze                   # Learning trends and weak concepts
 ```
 
 ## Academic References
@@ -189,7 +195,7 @@ This project underwent an independent documentation audit:
 | Effect size numbers accurate | ✅ |
 | Research institution attribution correct | ✅ |
 | Protocol logic consistent | ✅ |
-| Code tests passing (146/146) | ✅ |
+| Code tests passing (158/158) | ✅ |
 
 Full audit report: `docs/docu-review-report.md`
 

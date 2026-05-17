@@ -88,8 +88,8 @@ retaincraft/
 ├── docs/
 │   └── docu-review-report.md   # 文档审查报告
 └── scripts/
-    ├── srs.py                  # SM-2 间隔重复引擎 + 等级系统
-    ├── test_srs.py             # 单元测试（146 个用例）
+    ├── srs.py                  # SM-2 + FSRS-5 间隔重复引擎 + 等级系统
+    ├── test_srs.py             # 单元测试（158 个用例）
     ├── scenarios.md            # 模拟场景库（7 个场景）
     ├── evidence.md             # 学术引用和效果量
     └── templates.md            # 输出格式模板
@@ -190,7 +190,7 @@ python3 scripts/srs.py config                    # 查看/设置配置
 | 效果量数值准确 | ✅ |
 | 研究机构归属正确 | ✅ |
 | 协议逻辑一致 | ✅ |
-| 代码测试通过（146/146） | ✅ |
+| 代码测试通过（158/158） | ✅ |
 
 完整审查报告：`docs/docu-review-report.md`
 

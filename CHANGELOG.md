@@ -88,6 +88,61 @@
 
 ---
 
+## [1.3.0] - 2026-05-17
+
+**测试**: 158 个测试全部通过（+12）
+
+### 新增
+
+#### FSRS-5 间隔重复算法
+- 基于 IEEE TKDE 2023 论文（DOI: 10.1109/TKDE.2023.3251721）
+- 自实现 ~120 行，保持零外部依赖
+- 8 个核心函数：初始稳定性/难度、遗忘曲线、稳定性更新
+- 19 个默认参数（FSRS_V5_WEIGHTS）
+- 幂律遗忘曲线：R(t, S) = (1 + FACTOR × t / S)^DECAY
+- 难度均值回归、Hard 惩罚、Easy 奖励
+- 防御性工程：NaN/Inf 检查、值域 clamp、错误回退
+
+#### config algorithm 切换
+- `srs.py config set algorithm fsrs` — 启用 FSRS-5 调度
+- `srs.py config set algorithm sm2` — 使用 SM-2（默认）
+- 向后兼容：旧数据自动使用 SM-2
+
+#### 3 个新命令
+- `today` — 显示今日学习计划，含逾期分析和建议
+- `streak` — 显示连续学习天数
+- `analyze` — 学习趋势分析、薄弱概念、活动统计
+
+#### 学习模板
+- `learning-templates.json` — 3 个模板（编程语言、外语学习、考试复习）
+
+### 重构
+
+#### main() 函数重构
+- 246 行 if-elif → 38 行 dispatch 字典（O(1) 查表）
+- 所有 cmd_* 函数统一签名为 `(args: list[str])`
+- 7 个新 cmd_* 函数从 main() 内联逻辑提取
+
+#### 超长函数拆分（全部 < 50 行）
+- `cmd_review` (94→39), `check_burnout` (88→42)
+- `calc_level_by_accuracy` (84→38), `cmd_status` (74→23)
+
+#### 魔法数字提取
+- `SM2_SECOND_INTERVAL = 6` 替换硬编码
+
+### 新增学术引用
+
+| # | 引用 | 用途 |
+|---|------|------|
+| R12 | Ye et al. (2023) — FSRS-5 IEEE TKDE | FSRS-5 实现 |
+| R13 | fsrs-rs 工程实践 | 技术参考 |
+
+### 文档更新
+- `SKILL.md` 版本 1.3.0
+- `evidence.md` R12、R13
+
+---
+
 ## [1.1.0] - 2026-05-13
 
 ### 新增
