@@ -33,6 +33,9 @@ from srs import (
     update_profile,
 )
 
+# Explicit SM-2 config for tests that verify SM-2 behavior
+SM2_CONFIG = {"algorithm": "sm2", "mastery_threshold": 0.8, "level_thresholds": {"L2": 0.2, "L3": 0.4, "L4": 0.7, "L5": 0.9}}
+
 
 class TestCalcLevelByAccuracy(TestCase):
     """Test calc_level_by_accuracy function."""
@@ -408,7 +411,7 @@ class TestCalcNextReview(TestCase):
             "total_count": 5,
             "mastery": "reviewing",
         }
-        updated = calc_next_review(concept, "wrong")
+        updated = calc_next_review(concept, "wrong", SM2_CONFIG)
         self.assertEqual(updated["interval_days"], 1)
         # mastery stays "reviewing" because total_count >= 3 and accuracy >= 0.6
         # (4/5 = 0.8 >= 0.6)
@@ -424,7 +427,7 @@ class TestCalcNextReview(TestCase):
             "total_count": 5,
             "mastery": "reviewing",
         }
-        updated = calc_next_review(concept, "good")
+        updated = calc_next_review(concept, "good", SM2_CONFIG)
         # interval = 10 * 2.5 = 25
         self.assertEqual(updated["interval_days"], 25)
 
@@ -438,7 +441,7 @@ class TestCalcNextReview(TestCase):
             "total_count": 5,
             "mastery": "reviewing",
         }
-        updated = calc_next_review(concept, "easy")
+        updated = calc_next_review(concept, "easy", SM2_CONFIG)
         # ease_factor = 2.5 + 0.15 = 2.65
         self.assertAlmostEqual(updated["ease_factor"], 2.65)
 
@@ -452,7 +455,7 @@ class TestCalcNextReview(TestCase):
             "total_count": 5,
             "mastery": "reviewing",
         }
-        updated = calc_next_review(concept, "wrong")
+        updated = calc_next_review(concept, "wrong", SM2_CONFIG)
         # After wrong answer: total_count = 6, correct_count = 2
         # accuracy = 2/6 = 0.33 < 0.6
         # mastery should change to "learning"
@@ -468,7 +471,7 @@ class TestCalcNextReview(TestCase):
             "total_count": 5,
             "mastery": "reviewing",
         }
-        updated = calc_next_review(concept, "easy")
+        updated = calc_next_review(concept, "easy", SM2_CONFIG)
         # After easy answer: total_count = 6, correct_count = 5
         # accuracy = 5/6 = 0.83 >= 0.8
         # reviews = 6 >= 3
@@ -1259,7 +1262,7 @@ class TestCalcNextReviewHard(TestCase):
             "interval_days": 10, "ease_factor": 2.5,
             "reviews": 5, "correct_count": 4, "total_count": 5, "mastery": "reviewing",
         }
-        updated = calc_next_review(concept, "hard")
+        updated = calc_next_review(concept, "hard", SM2_CONFIG)
         self.assertEqual(updated["interval_days"], 12)
         self.assertAlmostEqual(updated["ease_factor"], 2.35)
         self.assertEqual(updated["correct_count"], 5)
@@ -1270,7 +1273,7 @@ class TestCalcNextReviewHard(TestCase):
             "interval_days": 10, "ease_factor": 1.4,
             "reviews": 5, "correct_count": 4, "total_count": 5, "mastery": "reviewing",
         }
-        updated = calc_next_review(concept, "hard")
+        updated = calc_next_review(concept, "hard", SM2_CONFIG)
         self.assertAlmostEqual(updated["ease_factor"], 1.3)
 
     def test_invalid_rating_raises_error(self):
@@ -1280,7 +1283,7 @@ class TestCalcNextReviewHard(TestCase):
             "reviews": 5, "correct_count": 4, "total_count": 5, "mastery": "reviewing",
         }
         with self.assertRaises(ValueError):
-            calc_next_review(concept, "invalid")
+            calc_next_review(concept, "invalid", SM2_CONFIG)
 
 
 class TestMasteryFromUnseen(TestCase):
@@ -1292,7 +1295,7 @@ class TestMasteryFromUnseen(TestCase):
             "interval_days": 1, "ease_factor": 2.5,
             "reviews": 0, "correct_count": 0, "total_count": 0, "mastery": "unseen",
         }
-        updated = calc_next_review(concept, "good")
+        updated = calc_next_review(concept, "good", SM2_CONFIG)
         self.assertEqual(updated["mastery"], "learning")
 
 
@@ -2287,7 +2290,7 @@ class TestSM2SecondInterval(TestCase):
         concept["ease_factor"] = 2.5
 
         # First review with "good"
-        updated = calc_next_review(concept, "good")
+        updated = calc_next_review(concept, "good", SM2_CONFIG)
         self.assertEqual(updated["interval_days"], 6)
 
     def test_third_review_uses_ease_factor(self):
@@ -2298,7 +2301,7 @@ class TestSM2SecondInterval(TestCase):
         concept["ease_factor"] = 2.5
 
         # Third review with "good"
-        updated = calc_next_review(concept, "good")
+        updated = calc_next_review(concept, "good", SM2_CONFIG)
         self.assertEqual(updated["interval_days"], 15)  # 6 * 2.5 = 15
 
     def test_wrong_rating_resets_interval(self):
@@ -2309,7 +2312,7 @@ class TestSM2SecondInterval(TestCase):
         concept["ease_factor"] = 2.5
 
         # Review with "wrong"
-        updated = calc_next_review(concept, "wrong")
+        updated = calc_next_review(concept, "wrong", SM2_CONFIG)
         self.assertEqual(updated["interval_days"], 1)
 
 
@@ -2466,17 +2469,17 @@ class TestFSRS5Algorithm(TestCase):
         self.assertLess(c2["interval_days"], c3["interval_days"],
                         "wrong rating should produce shorter interval than good")
 
-    def test_fsrs_default_is_sm2(self):
-        """Test that default algorithm is SM-2 (backward compatible)."""
+    def test_fsrs_default_is_fsrs(self):
+        """Test that default algorithm is FSRS-5 (v1.3.0)."""
         from srs import calc_next_review
         concept = srs.DEFAULT_CONCEPT.copy()
         concept["reviews"] = 0
         concept["total_count"] = 0
         concept["correct_count"] = 0
         updated = calc_next_review(concept, "good")
-        # SM-2 should not add FSRS fields
-        self.assertNotIn("difficulty", updated)
-        self.assertNotIn("stability", updated)
+        # FSRS-5 should add difficulty and stability fields
+        self.assertIn("difficulty", updated)
+        self.assertIn("stability", updated)
 
 
 if __name__ == "__main__":

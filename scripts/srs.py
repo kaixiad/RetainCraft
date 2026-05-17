@@ -32,6 +32,7 @@ Usage:
 
     # v1.3.0 new
     python3 srs.py config set algorithm fsrs # Switch to FSRS-5 algorithm
+    python3 srs.py optimize-params          # Personalize FSRS-5 weights from review history
 
 Storage: ~/learn/
 """
@@ -128,6 +129,8 @@ DEFAULT_CONFIG = {
     "session_duration": 60,
     "burnout_threshold": 3,
     "mastery_threshold": 0.8,
+    "algorithm": "fsrs",  # v1.3.0: FSRS-5 as default (was SM-2)
+    "fsrs_weights": None,  # None = use default 19 weights; list = personalized
     "level_thresholds": {
         "L2": 0.2,
         "L3": 0.4,
@@ -1069,6 +1072,10 @@ def calc_next_review(concept: dict[str, Any], rating: str, config: dict[str, Any
 
     # FSRS path
     if algorithm == "fsrs":
+        # Use personalized weights if available, otherwise defaults
+        custom_weights = config.get("fsrs_weights")
+        if custom_weights and len(custom_weights) >= 19:
+            _set_fsrs_weights(custom_weights)
         c = concept.copy()
         c["reviews"] = c.get("reviews", 0) + 1
         c["total_count"] = c.get("total_count", 0) + 1
@@ -1135,13 +1142,22 @@ def _update_mastery(c: dict[str, Any], config: dict[str, Any]) -> None:
 # Self-implemented to maintain zero external dependencies
 
 # FSRS-5 default weights (19 parameters)
-FSRS_V5_WEIGHTS = [
+FSRS_V5_WEIGHTS_DEFAULT = [
     0.40255, 1.18385, 3.173, 15.69105,      # w[0-3]: initial stability (Again/Hard/Good/Easy)
     7.1949, 0.5345, 1.4604, 0.0046,          # w[4-7]: difficulty calculation
     1.54575, 0.1192, 1.01925, 1.9395,        # w[8-11]: stability after recall/forgetting
     0.11, 0.29605, 2.2698, 0.2315,           # w[12-15]: stability after forgetting cont.
     2.9898, 0.51655, 0.6621                  # w[16-18]: short-term stability
 ]
+
+# Active weights (mutable, can be personalized via optimize-params)
+FSRS_V5_WEIGHTS = list(FSRS_V5_WEIGHTS_DEFAULT)
+
+
+def _set_fsrs_weights(weights: list[float]) -> None:
+    """Set personalized FSRS weights. Called by calc_next_review when config has fsrs_weights."""
+    global FSRS_V5_WEIGHTS
+    FSRS_V5_WEIGHTS = list(weights[:19])
 
 # Forgetting curve constants (derived from w[20] = -0.5 in FSRS-5)
 FSRS_DECAY = -0.5
@@ -1767,6 +1783,155 @@ def cmd_analyze(args: list[str]) -> None:
         print(f"    Total tests: {len(test_actions)}")
         if rate_actions:
             print(f"    Last rating: {rate_actions[-1]['timestamp'][:16]}")
+
+
+def cmd_optimize_params(args: list[str]) -> None:
+    """
+    Optimize FSRS-5 parameters using local review history.
+
+    Design intent: Uses numerical gradient descent (finite differences) to
+    minimize binary cross-entropy loss between predicted R and actual recall.
+    Pure Python implementation, zero external dependencies.
+
+    Requires at least 100 different-day reviews across all topics.
+    Saves optimized weights to config.json under 'fsrs_weights' key.
+    """
+    import math
+    log = load_learning_log()
+
+    # Collect rate actions (review events)
+    rate_actions = [e for e in log if e["action"] == "rate"]
+    if len(rate_actions) < 100:
+        print(f"\n[OPTIMIZE] Need at least 100 reviews for optimization.")
+        print(f"  Current: {len(rate_actions)} reviews")
+        print(f"  Keep learning and come back later!")
+        return
+
+    print(f"\n[OPTIMIZE] Optimizing FSRS-5 parameters...")
+    print(f"  Reviews: {len(rate_actions)}")
+
+    # Group by topic+concept to build review histories
+    histories: dict[str, list[dict]] = {}
+    for entry in rate_actions:
+        topic = entry.get("topic", "")
+        concept = entry.get("details", {}).get("concept", "")
+        key = f"{topic}/{concept}"
+        if key not in histories:
+            histories[key] = []
+        histories[key].append({
+            "timestamp": entry["timestamp"],
+            "rating": entry["details"].get("rating", "good"),
+        })
+
+    # Sort each history by timestamp
+    for key in histories:
+        histories[key].sort(key=lambda x: x["timestamp"])
+
+    # Count different-day reviews
+    different_day_count = 0
+    for key, reviews in histories.items():
+        dates = set(r["timestamp"][:10] for r in reviews)
+        different_day_count += len(dates)
+
+    if different_day_count < 50:
+        print(f"  Different-day reviews: {different_day_count} (need 50+)")
+        print(f"  Try reviewing across multiple days for better optimization.")
+        return
+
+    print(f"  Different-day reviews: {different_day_count}")
+    print(f"  Concepts: {len(histories)}")
+
+    # Simple gradient descent with finite differences
+    # Minimize: sum of -[y*log(R) + (1-y)*log(1-R)] where y=1 if recalled, 0 if forgotten
+    weights = list(FSRS_V5_WEIGHTS_DEFAULT)
+    learning_rate = 0.001
+    epochs = 10
+    epsilon = 0.01  # For finite differences
+
+    def compute_loss(w):
+        """Compute total BCE loss across all review histories."""
+        global FSRS_V5_WEIGHTS
+        FSRS_V5_WEIGHTS = list(w)
+        total_loss = 0.0
+        count = 0
+        for key, reviews in histories.items():
+            s = None
+            d = None
+            prev_date = None
+            for rev in reviews:
+                rating_int = RATING_TO_INT.get(rev["rating"], 3)
+                rev_date = rev["timestamp"][:10]
+                if s is None:
+                    # First review — initialize
+                    s = fsrs_init_stability(rating_int)
+                    d = fsrs_init_difficulty(rating_int)
+                    prev_date = rev_date
+                    continue
+                # Compute elapsed days
+                try:
+                    dt_prev = datetime.strptime(prev_date, "%Y-%m-%d")
+                    dt_curr = datetime.strptime(rev_date, "%Y-%m-%d")
+                    elapsed = max(1, (dt_curr - dt_prev).days)
+                except ValueError:
+                    elapsed = 1
+                # Predict R
+                r = fsrs_retrievability(elapsed, s)
+                r = max(0.001, min(0.999, r))  # Clamp for log stability
+                # Actual recall: 1 if not "wrong", 0 if "wrong"
+                y = 0.0 if rev["rating"] == "wrong" else 1.0
+                # BCE loss
+                loss = -(y * math.log(r) + (1 - y) * math.log(1 - r))
+                total_loss += loss
+                count += 1
+                # Update state
+                d = fsrs_update_difficulty(d, rating_int)
+                if rating_int == 1:
+                    s = fsrs_stability_after_forgetting(s, d, r)
+                else:
+                    s = fsrs_stability_after_recall(s, d, r, rating_int)
+                prev_date = rev_date
+        return total_loss / max(1, count)
+
+    # Initial loss
+    best_loss = compute_loss(weights)
+    best_weights = list(weights)
+    print(f"  Initial loss: {best_loss:.4f}")
+
+    # Gradient descent with finite differences (only optimize w[0]-w[14], skip bounds)
+    for epoch in range(epochs):
+        gradients = [0.0] * 15  # Only optimize first 15 parameters
+        for i in range(15):
+            w_plus = list(weights)
+            w_plus[i] += epsilon
+            loss_plus = compute_loss(w_plus)
+
+            w_minus = list(weights)
+            w_minus[i] -= epsilon
+            loss_minus = compute_loss(w_minus)
+
+            gradients[i] = (loss_plus - loss_minus) / (2 * epsilon)
+
+        # Update weights
+        for i in range(15):
+            weights[i] -= learning_rate * gradients[i]
+            # Clamp to reasonable bounds
+            weights[i] = max(0.001, min(100.0, weights[i]))
+
+        current_loss = compute_loss(weights)
+        if current_loss < best_loss:
+            best_loss = current_loss
+            best_weights = list(weights)
+        print(f"  Epoch {epoch+1}/{epochs}: loss={current_loss:.4f} (best={best_loss:.4f})")
+
+    # Save optimized weights
+    config = load_config(use_cache=False)
+    config["fsrs_weights"] = best_weights
+    save_config(config)
+    print(f"\n[OK] Optimized parameters saved to config.json")
+    print(f"  Loss: {best_loss:.4f} (lower is better)")
+    print(f"  Optimized {15} of 19 parameters (w[0]-w[14])")
+    print(f"  To use: algorithm is already 'fsrs' — parameters applied automatically")
+    print(f"  To reset: srs.py config set fsrs_weights null")
 
 
 def _show_topic_status(topic: str, concepts: dict[str, Any]) -> None:
@@ -2544,6 +2709,7 @@ def main() -> None:
         "today": cmd_today,
         "streak": cmd_streak,
         "analyze": cmd_analyze,
+        "optimize-params": cmd_optimize_params,
         "status": cmd_status,
         "record-test": cmd_record_test,
         "test-history": cmd_test_history,
