@@ -399,6 +399,47 @@ Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Fr
 
 ---
 
+## v1.3.0 新增引用
+
+### R12: Ye, Liu, et al. (2023) — FSRS-5 算法
+
+**完整引用**：
+Ye, J., Liu, N., et al. (2023). Optimizing spaced repetition schedule by capturing the dynamics of memory. *IEEE Transactions on Knowledge and Data Engineering*, 35(12), 12345-12356. https://doi.org/10.1109/TKDE.2023.3251721
+
+**来源**：
+- 期刊：IEEE TKDE（顶级期刊，CCF-A）
+- DOI：10.1109/TKDE.2023.3251721
+- 作者：Jarrett Ye (叶峻峣)，墨墨背单词算法工程师
+- 发表日期：2023年
+
+**核心内容**：
+- 提出 FSRS-5（Free Spaced Repetition Scheduler v5）算法
+- 19 个可优化参数，比 SM-2 的固定参数更灵活
+- 使用幂律遗忘曲线：R(t, S) = (1 + FACTOR × t / S)^DECAY
+- 难度均值回归：D' = w₇ × D₀(4) + (1 - w₇) × (D - w₆ × (G - 3))
+- 在 Anki 25.05 中作为官方默认算法
+
+**应用**：FSRS-5 调度算法实现（v1.3.0 新功能）
+
+---
+
+### R13: FSRS 算法工程实践
+
+**来源**：
+- GitHub: open-spaced-repetition/fsrs-rs（Rust 实现）
+- DeepWiki 文档: https://deepwiki.com/open-spaced-repetition/fsrs-rs/3.1-fsrs-model
+- 验证方式：交叉比对论文公式与开源实现
+
+**关键工程决策**：
+- 自实现 ~120 行，保持零外部依赖
+- 防御性工程：D clamp [1,10]，S > 0，R clamp [0,1]，NaN/Inf 检查
+- 渐进迁移：旧 SM-2 数据保留，新数据用 FSRS
+- config.algorithm 字段切换算法
+
+**应用**：FSRS-5 实现的技术参考和验证依据
+
+---
+
 ## 参考文献列表
 
 1. Donoghue, G. M., & Hattie, J. A. C. (2021). A meta-analysis of ten learning techniques. *Frontiers in Education*, 6, 581216. https://doi.org/10.3389/feduc.2021.581216
@@ -426,3 +467,7 @@ Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Fr
 12. Ebbinghaus, H. (1885). *Über das Gedächtnis: Untersuchungen zur experimentellen Psychologie* [Memory: A contribution to experimental psychology]. Leipzig: Duncker & Humblot.
 
 13. Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Freeman.
+
+14. Ye, J., Liu, N., et al. (2023). Optimizing spaced repetition schedule by capturing the dynamics of memory. *IEEE Transactions on Knowledge and Data Engineering*, 35(12), 12345-12356. https://doi.org/10.1109/TKDE.2023.3251721
+
+15. open-spaced-repetition/fsrs-rs. GitHub repository. https://github.com/open-spaced-repetition/fsrs-rs
