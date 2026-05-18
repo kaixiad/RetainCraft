@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
 # RetainCraft v1.3.0 — 间隔重复学习系统
-# 内部注释版（Internal annotated version）
 # 最后更新: 2026-05-17
 #
 # 文件用途：主程序，包含 FSRS-5/SM-2 算法、23 个 CLI 命令、数据持久化
@@ -81,7 +80,6 @@ from pathlib import Path
 from typing import Any
 
 
-# === [2] 输入验证 (Input Validation) ===
 # 防止路径遍历攻击：sanitize_topic/concept 用正则白名单过滤用户输入
 # 正则 ^[a-zA-Z0-9_\-\u4e00-\u9fff]+$ 只允许字母/数字/下划线/连字符/中文
 
@@ -183,7 +181,6 @@ DEFAULT_CONCEPT = {
 }
 
 
-# === [3] 原子写入 (Atomic File I/O) ===
 # 使用 tempfile + os.replace 防止写入过程中断导致数据损坏
 # 所有文件写入都经过这两个函数，确保数据一致性
 
@@ -240,7 +237,6 @@ def _atomic_text_save(filepath: Path, content: str) -> None:
         raise
 
 
-# === [4] 学习数据读写 (Learning Data I/O) ===
 # learning_log.json — 所有学习活动记录（rate/test/simulation/review）
 # test_history.json — 模块测试成绩（按 topic 分组）
 # simulation_history.json — 模拟场景成绩（按 topic 分组）
@@ -443,7 +439,6 @@ def record_simulation(topic: str, scenario: str, score: int, rounds: int = 3) ->
     return simulation_result
 
 
-# === [5] 会话检查 + 倦怠检测 (Session & Burnout) ===
 # check_session: 检测未记录的模块测试（防止 AI 遗忘导致等级不更新）
 # check_burnout: 分析学习倦怠风险（基于准确率趋势 + 连续低分 + 学习频率）
 
@@ -604,7 +599,6 @@ def check_burnout(topic: str, window: int = 5) -> dict[str, Any]:
     }
 
 
-# === [6] 用户画像 (User Profile) ===
 # profile.json — 用户学习画像（各 topic 的等级、掌握度、测试成绩）
 # 支持：查看画像、更新画像、与职位要求对比
 
@@ -808,7 +802,6 @@ def _check_demotion(level: int, history: list[dict[str, Any]], level_thresholds:
     return level
 
 
-# === [7] 等级计算 (Level System) ===
 # L1-L5 等级系统：基于模块测试准确率，非 SM-2 掌握度
 # 升级规则：前2次测试平均 >= 阈值
 # 降级规则：最近3次测试低于阈值（渐进降级，每次只降一级）
@@ -873,7 +866,6 @@ def calc_mastery_overview(concepts: dict[str, Any]) -> tuple[int, int, float]:
     return mastered, total, pct
 
 
-# === [8] 配置/概念/进度管理 (Config, Concepts, Progress) ===
 # config.json — 用户配置（算法选择、学习深度、每日限额等）
 # concepts.json — 每个 topic 的概念列表（间隔、难度、稳定性等）
 # progress.md — 每个 topic 的学习进度 Markdown
@@ -1021,7 +1013,6 @@ def today() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
-# === [9] FSRS-5 算法核心 (FSRS-5 Algorithm Core) ===
 # 基于 IEEE TKDE 2023 论文：Su, Ye, Nie, Cao & Chen
 # DOI: 10.1109/TKDE.2023.3251721
 # 自实现 ~120 行，保持零外部依赖
@@ -1449,13 +1440,11 @@ def calc_level(concepts: dict[str, Any], topic: str | None = None) -> tuple[str,
         return "L1", "入门 (Novice)", "[L1]"
 
 
-# === [11] 显示辅助函数 (Display Helpers) ===
 # get_accuracy_str: 准确率显示字符串
 # calc_overdue: 计算逾期天数 = today - next_review
 # get_mastery_emoji: 掌握状态 emoji
 # calc_level: 综合等级计算（优先用 test_history，回退用 concepts）
 
-# === [12] 核心命令: init/add/rate/review (Core Commands) ===
 # cmd_init: 创建新 topic（~/learn/topics/{topic}/）
 # cmd_add: 添加概念到 topic
 # cmd_rate: 非交互式评分（AI 助手调用）
@@ -1711,7 +1700,6 @@ def cmd_due(args: list[str]) -> None:
         print(f"     {mastery} {name} [acc: {accuracy}, int: {c['interval_days']}d]{overdue_str}")
 
 
-# === [13] 数据分析命令 (Analytics Commands) ===
 # cmd_due: 显示所有到期复习
 # cmd_today: 今日学习计划 + 逾期分析（v1.3.0 新增）
 # cmd_streak: 连续学习天数（Duolingo 模型：从今天算）（v1.3.0 新增）
@@ -2070,7 +2058,6 @@ def cmd_optimize_params(args: list[str]) -> None:
     print(f"\n  [TIP] Re-optimize every 2-3 months. Give new parameters 2 weeks to evaluate.")
 
 
-# === [14] 状态/配置命令 (Status & Config Commands) ===
 # cmd_status: 显示学习状态（总体 / 单个 topic）
 # cmd_config: 查看/设置配置（algorithm、learning_depth 等）
 
@@ -2216,7 +2203,6 @@ def cmd_config(args: list[str]) -> None:
     print(f"  [OK] {key} = {converted_value}")
 
 
-# === [15] 提醒系统 (Reminder System — OpenClaw Cron) ===
 # 所有 subprocess 调用都在这里，调用 openclaw CLI 管理定时任务
 # _cron_exists: 检查 cron 任务是否存在
 # _get_user_channel: 从 openclaw sessions 检测用户通知渠道
@@ -2624,7 +2610,6 @@ def cmd_weekly_report(args: list[str]) -> None:
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
-# === [16] 记录/画像命令 (Recording & Profile Commands) ===
 # cmd_record_test: 记录模块测试成绩
 # cmd_test_history: 查看测试历史
 # cmd_record_simulation: 记录模拟场景成绩
@@ -2853,7 +2838,6 @@ def cmd_check_burnout(args: list[str]) -> None:
                 print(f"    - {s}")
 
 
-# === [17] main() 入口 (Entry Point) ===
 # dispatch 字典：23 个命令的 O(1) 查表路由
 # v1.3.0 重构：246 行 if-elif → 38 行 dispatch 字典
 # 所有 cmd_* 函数统一签名为 (args: list[str])
