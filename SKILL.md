@@ -1,13 +1,14 @@
 ---
 name: retaincraft
 description: >
-  AI learning assistant with spaced repetition, active recall, Feynman technique,
-  and study planning. Helps you memorize, review, and master any subject.
+  AI learning assistant with distributed practice (d=0.85), practice testing (d=0.74),
+  self-explanation (d=0.54), interleaved practice (d=0.47), and elaborative interrogation (d=0.56).
+  Implements these as: spaced repetition, active recall, Feynman technique, interleaved practice, and study planning.
   Features: FSRS-5 spaced repetition (default, ML-based), SM-2 fallback, forgetting curve alerts, burnout detection,
   learning contracts, weekly reports, module tests, progress tracking.
-  基于循证学习科学的 AI 辅助学习协议：间隔重复、主动回忆、费曼学习法、
-  交错练习、精细加工提问。帮助你记忆、复习、掌握任何学科。
-  功能：间隔重复调度、遗忘曲线提醒、倦怠检测、学习契约、周报、模块测试、进度追踪。
+  基于循证学习科学的 AI 辅助学习协议：分布式练习、实践测试、自我解释、交错练习、精细加工提问。
+  对应实现为：间隔重复、主动回忆、费曼学习法、交错练习、学习规划。
+  功能：FSRS-5 间隔重复调度、遗忘曲线提醒、倦怠检测、学习契约、周报、模块测试、进度追踪。
 version: 1.3.0
 author: kaixiad
 license: MIT
@@ -136,11 +137,11 @@ Evidence-based AI-assisted interactive learning protocol
 
 | Method (方法) | Effect Size (效果量) | Source (来源) |
 |---------------|---------------------|---------------|
-| Spaced Repetition (间隔重复) | d=0.85 | Donoghue & Hattie 2021 |
-| Active Recall (主动回忆) | d=0.74 | Donoghue & Hattie 2021 |
-| Interleaving (交错练习) | d=0.47 | Donoghue & Hattie 2021 |
-| Elaborative Interrogation (精细加工提问) | d=0.56 | Donoghue & Hattie 2021 |
-| Feynman Technique (费曼学习法) | d=0.54* | Donoghue & Hattie 2021 |
+| Distributed Practice → 间隔重复 | d=0.85 | Donoghue & Hattie 2021 |
+| Practice Testing → 主动回忆 | d=0.74 | Donoghue & Hattie 2021 |
+| Self-Explanation → 费曼学习法 | d=0.54* | Donoghue & Hattie 2021 |
+| Interleaved Practice → 交错练习 | d=0.47 | Donoghue & Hattie 2021 |
+| Elaborative Interrogation → 精细加工提问 | d=0.56 | Donoghue & Hattie 2021 |
 | AI Tutoring (AI 辅导) | 0.63-1.3 SD | Kestin et al. 2025 RCT |
 
 > **Note (注)**: *d=0.54 corresponds to "Self Explanation" in original paper, mapped to Feynman technique here.
