@@ -85,10 +85,8 @@ retaincraft/
 │   ├── workflows/ci.yml        # GitHub Actions CI/CD
 │   ├── ISSUE_TEMPLATE/         # Issue 模板
 │   └── pull_request_template.md # PR 模板
-├── docs/
-│   └── docu-review-report.md   # 文档审查报告
 └── scripts/
-    ├── srs.py                  # SM-2 + FSRS-5 间隔重复引擎 + 等级系统
+    ├── srs.py                  # FSRS-5 + SM-2 间隔重复引擎 + 等级系统
     ├── test_srs.py             # 单元测试（159 个用例）
     ├── scenarios.md            # 模拟场景库（7 个场景）
     ├── evidence.md             # 学术引用和效果量
@@ -197,8 +195,6 @@ python3 scripts/srs.py optimize-params           # 个性化 FSRS-5 参数（需
 | 研究机构归属正确 | ✅ |
 | 协议逻辑一致 | ✅ |
 | 代码测试通过（159/159） | ✅ |
-
-完整审查报告：`docs/docu-review-report.md`
 
 ## AI 辅助开发声明
 

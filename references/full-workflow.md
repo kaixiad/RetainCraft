@@ -165,7 +165,7 @@ Module 2: ...
 - L5:20% 概念回忆 + 30% 应用 + 30% 分析 + 20% 对比
 
 **Phase 3 类型判定(AI助手必须在出题前确认)**:
-- 复习 → 只更新 SM-2 状态,不调用 record-test
+- 复习 → 只更新间隔重复状态(不调用 record-test)
 - 模块测试 → 必须调用 record-test,决定等级升降
 
 **📌 复习 vs 模块测试(重要区分)**:
@@ -175,7 +175,7 @@ Module 2: ...
 | 目的 | 强化记忆 | 阶段性评估 |
 | 影响 | 不影响等级 | 决定等级升降 |
 | 题型 | 概念回忆为主 | 按等级分配题型 |
-| 记录 | SM-2 状态更新 | test_history 记录 |
+| 记录 | 间隔重复状态更新(FSRS-5/SM-2) | test_history 记录 |
 | 命令 | srs.py rate | srs.py record-test |
 
 **Phase 3 结束后自检(必须执行)**:
@@ -197,18 +197,18 @@ Module 2: ...
 - 不要跳过薄弱模块直接学下一个——基础不牢会连锁影响后续模块
 - 如果用户坚持要继续,记录建议但尊重用户选择
 
-### Phase 4:间隔复习(SM-2 算法)
-- ease_factor 初始 2.5,动态调整
-- good: interval = interval × ease_factor(递增)
-- hard: interval = interval × 1.2, 同时 ease_factor = ease_factor - 0.15
-- easy: interval = interval × (ease_factor + 0.15), 同时 ease_factor = ease_factor + 0.15
-- wrong: interval 重置为 1 天, ease_factor -0.2
-- 评分对 EF 的影响: easy(+0.15) / good(不变) / hard(-0.15) / wrong(-0.2)
+### Phase 4:间隔复习(FSRS-5 默认,SM-2 备选)
+- **默认算法**: FSRS-5 (IEEE TKDE 2023)，ML-based，19 个可优化参数
+- **备选算法**: SM-2 (Wozniak 1987)，通过 `config set algorithm sm2` 切换
+- **FSRS-5 核心**: 幂律遗忘曲线 R(t,S) = (1+FACTOR×t/S)^DECAY
+- **FSRS-5 评分**: wrong→稳定性骤降，hard→小增，good→正常增，easy→大增
+- **个性化**: 积累 1000+ 次 review 后可运行 `optimize-params` 优化参数
+- SM-2 备选: ease_factor 初始 2.5,good/hard/easy/wrong 四种评分公式
 
 **⚠️ 本节描述仅供参考,以 scripts/srs.py 源码为准。**
 
 **触发机制**:
-- 基于 SM-2 时间表，到期主动提醒
+- 基于 FSRS-5/SM-2 时间表，到期主动提醒
 - 心跳检查: `python3 scripts/srs.py due`
 - 有到期内容 → 发送复习提醒
 - 没有 → HEARTBEAT_OK
@@ -233,7 +233,7 @@ AI发起: "你有 N 个概念需要复习，现在开始吗？"
 
 **AI助手执行指令**:
 1. 对每个答错的概念，调用 `srs.py add <topic> <concept>` 确保概念存在
-2. 根据答对/答错情况，调用 `srs.py rate <topic> <concept> <rating>` 更新 SM-2 状态
+2. 根据答对/答错情况，调用 `srs.py rate <topic> <concept> <rating>` 更新间隔重复状态(FSRS-5/SM-2)
    - rating 取值：easy / good / hard / wrong
    - 示例：`python3 scripts/srs.py rate 线性代数 矩阵乘法 good`
 3. 注意：`srs.py review` 是交互式命令（需要用户输入），AI 助手不可直接调用。应使用 `srs.py rate` 逐步更新概念状态
@@ -290,7 +290,7 @@ AI发起: "你有 N 个概念需要复习，现在开始吗？"
 ### 两个独立维度
 
 - **等级** = 基于模块测试答对率(权威,用于升级判定)
-- **SM-2 状态** = 基于概念 mastered 比例(仅用于展示,不用于等级判定)
+- **间隔重复状态** = 基于概念 mastered 比例(仅用于展示,不用于等级判定)
 - 两者独立计算,不混用
 
 ---
@@ -506,7 +506,7 @@ session 结束 → check-session 验证 + memory 最终更新
 | 系统 | 存什么 | 位置 | 谁读 |
 |------|--------|------|------|
 | **系统 memory** | 学习进度摘要、薄弱点、上次学到哪 | `memory/YYYY-MM-DD.md` + `MEMORY.md` | AI助手每次启动自动读 |
-| **~/learn/** | SM-2 算法数据、概念掌握度、配置 | `~/learn/topics/{topic}/concepts.json` | `srs.py` 脚本读写 |
+| **~/learn/** | FSRS-5/SM-2 算法数据、概念掌握度、配置 | `~/learn/topics/{topic}/concepts.json` | `srs.py` 脚本读写 |
 
 ### 恢复优先级
 concepts.json > memory 文件
@@ -576,7 +576,9 @@ AI助手收到心跳 →
 | `daily_review_limit` | srs.py | 每天最多复习多少个概念 |
 | `session_duration` | AI 助手 | 单次学习时长上限(分钟),用于安排内容量 |
 | `burnout_threshold` | AI 助手 | 连续答错多少题触发倦怠检测 |
-| `mastery_threshold` | srs.py | SM-2 状态判定：答对率超过此值视为"mastered" |
+| `mastery_threshold` | srs.py | 掌握度判定：答对率超过此值视为"mastered" |
+| `algorithm` | srs.py | 算法选择：`fsrs`(默认) 或 `sm2` |
+| `fsrs_weights` | srs.py | FSRS 个性化参数（optimize-params 生成） |
 | `level_thresholds` | srs.py | 等级升降的答对率阈值,已在代码中强制执行 |
 
 > **注**: `learning_depth` 和 `learner_type` 是给 AI 助手读取的配置信息,AI 助手应根据这些值调整教学行为。srs.py 不使用这两个字段。

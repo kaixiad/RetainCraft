@@ -84,8 +84,6 @@ retaincraft/
 │   ├── workflows/ci.yml        # GitHub Actions CI/CD
 │   ├── ISSUE_TEMPLATE/         # Issue templates
 │   └── pull_request_template.md # PR template
-├── docs/
-│   └── docu-review-report.md   # Documentation audit report
 └── scripts/
     ├── srs.py                  # SM-2 + FSRS-5 spaced repetition engine + level system
     ├── test_srs.py             # Unit tests (159 test cases)
@@ -196,8 +194,6 @@ This project underwent an independent documentation audit:
 | Research institution attribution correct | ✅ |
 | Protocol logic consistent | ✅ |
 | Code tests passing (159/159) | ✅ |
-
-Full audit report: `docs/docu-review-report.md`
 
 ## AI-Assisted Development Disclosure
 
