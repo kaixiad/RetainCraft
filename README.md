@@ -16,7 +16,7 @@ Not "here's some material, figure it out yourself" — your AI studies with you,
 
 ## Features
 
-- **5 evidence-based methods** in one protocol: spaced repetition (d=0.85), active recall (d=0.74), Feynman technique (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants)
+- **5 evidence-based methods** in one protocol: distributed practice (d=0.85), practice testing (d=0.74), self-explanation (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants). We implement these as: spaced repetition, active recall, Feynman technique, interleaved practice, and elaborative interrogation.
 - **FSRS-5 spaced repetition (default)**: ML-based scheduling from IEEE TKDE 2023 research, with SM-2 as fallback. Personalizable via `optimize-params` after 1000+ reviews
 - **Pre-assessment + module tests**: quantifies learning with before/after comparison
 - **Reminder system**: daily learning plans + weekly reports via cron, auto-detects notification channel
