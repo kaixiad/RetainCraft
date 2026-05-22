@@ -7,14 +7,14 @@
 
 ## 核心方法论（循证）
 
-| 方法 | 效果量 (d) | 来源 | 原始编码类别 | 适用阶段 |
-|------|-----------|------|-------------|----------|
-| 间隔重复 | 0.85 | Donoghue & Hattie 2021 | Distributed Practice | 长期记忆巩固 |
-| 主动回忆 | 0.74 | Donoghue & Hattie 2021 | Practice Testing | 知识提取训练 |
-| 精细加工提问 | 0.56 | Donoghue & Hattie 2021 | Elaborative Interrogation | 深度加工 |
-| 自我解释/费曼学习法 | 0.54 | Donoghue & Hattie 2021 | Self Explanation | 深度理解检验 |
-| 交错练习 | 0.47 | Donoghue & Hattie 2021 | Interleaved Practice | 灵活运用能力 |
-| AI 辅导 | 0.63-1.3 SD | Kestin et al. 2025 | RCT (N=194) | 个性化学习 |
+| 方法 | 效果量 (d) | 来源 | 原始编码类别 | 适用阶段 | 落地层级 |
+|------|-----------|------|-------------|----------|----------|
+| 间隔重复 | 0.85 | Donoghue & Hattie 2021 | Distributed Practice | 长期记忆巩固 | 🟢 代码级 |
+| 主动回忆 | 0.74 | Donoghue & Hattie 2021 | Practice Testing | 知识提取训练 | 🟢🟡 混合级 |
+| 精细加工提问→因果追问 | 0.56 | Donoghue & Hattie 2021 | Elaborative Interrogation | 深度加工 | 🔵 AI协议级 |
+| 自我解释→费曼学习法 | 0.54 | Donoghue & Hattie 2021 | Self Explanation | 深度理解检验 | 🔵 AI协议级 |
+| 交错练习 | 0.47 | Donoghue & Hattie 2021 | Interleaved Practice | 灵活运用能力 | 🔵 AI协议级 |
+| AI 辅导 | 0.63-1.3 SD | Kestin et al. 2025 | RCT (N=194) | 个性化学习 | 🟢🟡 混合级 |
 
 > **注**：效果量 d 值均来自 Donoghue & Hattie (2021) 元分析，基于 242 项研究、1,619 个效果量、169,179 名参与者。
 > "自我解释"（Self Explanation）映射为"费曼学习法"，两者认知过程高度重合，但严格来说属于概念近似。
@@ -63,6 +63,8 @@ Donoghue, G. M., & Hattie, J. A. C. (2021). A meta-analysis of ten learning tech
 - 效果量在表面学习（d=0.60）中高于深度学习（d=0.26）
 - 近迁移（d=0.61）效果显著高于远迁移（d=0.39）
 
+**落地层级**：⚪ 理论基准 — 效果量数据，不参与代码
+
 ---
 
 ### R2: Dunlosky et al. (2013)
@@ -88,6 +90,8 @@ Dunlosky, J., Rawson, K. A., Marsh, E. J., Nathan, M. J., & Willingham, D. T. (2
 > Dunlosky et al. (2013) 采用的是**定性分类**（高/中/低效用），而非量化效果量。
 > SKILL.md 中引用的具体 d 值（如 d=0.74、d=0.56）实际来自 Donoghue & Hattie (2021) 的元分析。
 > 两篇文献的关系：Dunlosky 2013 定性分类"哪些方法好"，Donoghue & Hattie 2021 定量回答"好多少"。
+
+**落地层级**：⚪ 理论基准 — 效用分类，不参与代码
 
 ---
 
@@ -118,6 +122,8 @@ Kestin, G., Miller, K., Klales, A., et al. (2025). AI tutoring outperforms in-cl
 **关键说明**：
 > 该研究强调 AI 辅导工具经过了基于教学法原理的精心设计（系统性脚手架、个性化反馈、自定步调学习），而非简单使用通用聊天机器人。
 
+**落地层级**：🟢🟡 混合级 — 整个 skill 即 AI 辅导
+
 ---
 
 ### R4: Wang, Ribeiro, Robinson, Loeb, & Demszky (2024)
@@ -146,6 +152,8 @@ Wang, R. E., Ribeiro, A., Robinson, C., Loeb, S., & Demszky, D. (2024). Tutor Co
 **溯源说明**：
 > 此引用原来为同作者团队的博客文章 "Productive Struggle"（Stanford AI Lab Blog, 2025），现替换为该博客所引用的原始研究论文，以提升学术规范性。博客中讨论的"生产性挣扎"概念源自该论文的实验发现。
 
+**落地层级**：⚪ 概念支撑 — Human-AI 协作理念
+
 ---
 
 ### R5: Ericsson, Krampe, & Tesch-Römer (1993)
@@ -172,6 +180,8 @@ Ericsson, K. A., Krampe, R. T., & Tesch-Römer, C. (1993). The role of deliberat
 **重要说明**：
 > 该论文是**理论框架**而非实验研究，因此不提供标准化的效果量（Cohen's d）。
 > 这意味着实战模拟阶段的循证强度弱于其他 5 个 Phase。
+
+**落地层级**：🟢🟡 混合级 — 模拟场景 + record_simulation
 
 ---
 
@@ -208,6 +218,8 @@ Wozniak, P. (1987). *Optimization of learning* (Master's thesis). University of 
 > 这些是合理的工程简化，在 Anki 等主流 SRS 工具中广泛采用。
 > 但严格来说并非原始 SM-2 算法的忠实复现。
 > SM-2 发布于 1987 年，其发明者 Wozniak 已将算法迭代至 SM-18。
+
+**落地层级**：🟢 代码级 — calc_next_review 调度
 
 ---
 
@@ -319,6 +331,8 @@ Gollwitzer, P. M. (1999). Implementation intentions: Strong effects of simple pl
 - 格式："如果 X 情况发生，我会做 Y 行动"
 
 **应用**：学习契约（Step 0.1）- 帮助用户制定具体的学习计划
+**落地层级**：🟢 代码级 — sign-contract 实施意图
+
 
 ---
 
@@ -336,7 +350,9 @@ Maslach, C., & Leiter, M. P. (2016). Understanding the burnout experience: Recen
 - 倦怠是持续压力导致的，需要主动干预
 - 倦怠的三个维度：情感耗竭、去人格化、个人成就感降低
 
-**应用**：懈怠响应策略 - 根据倦怠风险调整学习强度
+**应用**：性能疲劳检测（非 Maslach 临床倦怠三维度）。代码通过连续低准确率+趋势下降检测学习疲劳，提供休息建议。未测量情感耗竭、去人格化、个人成就感降低。
+
+**落地层级**：🟠 弱关联级
 
 ---
 
@@ -355,6 +371,8 @@ Steel, P. (2007). The nature of procrastination: A meta-analytic and theoretical
 - 约 20% 成年人和 50% 学生存在拖延问题
 
 **应用**：遗忘风险提醒 - 提醒用户避免拖延学习
+**落地层级**：🟠 弱关联级 — 拖延提醒间接体现
+
 
 ---
 
@@ -378,6 +396,8 @@ Ebbinghaus, H. (1885). *Über das Gedächtnis: Untersuchungen zur experimentelle
 | 7 天 | 75% | 25% |
 
 **应用**：遗忘风险提醒 - 根据遗忘曲线提醒用户复习
+**落地层级**：🟢 代码级 — cmd_reminder 遗忘率
+
 
 ---
 
@@ -396,6 +416,8 @@ Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Fr
 - 掌握性经验（mastery experiences）是建立自我效能感的最强途径
 
 **应用**：周报鼓励语 - 通过展示学习成果增强用户自我效能感
+**落地层级**：🟠 弱关联级 — 周报数据，鼓励语在协议层
+
 
 ---
 
@@ -422,15 +444,16 @@ Su, J., Ye, J., Nie, L., Cao, Y., & Chen, Y. (2023). Optimizing spaced repetitio
 - 在 Anki 25.05 中作为官方默认算法
 
 **应用**：FSRS-5 调度算法实现（v1.3.0 新功能）
+**落地层级**：🟢 代码级 — 8个核心函数 19参数
+
 
 ---
 
 ### R13: FSRS 算法工程实践
 
 **来源**：
-- GitHub: open-spaced-repetition/fsrs-rs（Rust 实现）
-- DeepWiki 文档: https://deepwiki.com/open-spaced-repetition/fsrs-rs/3.1-fsrs-model
-- 验证方式：交叉比对论文公式与开源实现
+- 论文：IEEE TKDE 2023 (DOI: 10.1109/TKDE.2023.3251721)
+- 验证方式：对照论文公式逐项验证，含遗忘曲线、稳定性更新、难度均值回归
 
 **关键工程决策**：
 - 自实现 ~120 行，保持零外部依赖
@@ -439,6 +462,8 @@ Su, J., Ye, J., Nie, L., Cao, Y., & Chen, Y. (2023). Optimizing spaced repetitio
 - config.algorithm 字段切换算法
 
 **应用**：FSRS-5 实现的技术参考和验证依据
+**落地层级**：🟢 代码级 — 自实现 + 防御工程
+
 
 ---
 
@@ -471,5 +496,3 @@ Su, J., Ye, J., Nie, L., Cao, Y., & Chen, Y. (2023). Optimizing spaced repetitio
 13. Bandura, A. (1997). *Self-efficacy: The exercise of control*. New York: W. H. Freeman.
 
 14. Su, J., Ye, J., Nie, L., Cao, Y., & Chen, Y. (2023). Optimizing spaced repetition schedule by capturing the dynamics of memory. *IEEE Transactions on Knowledge and Data Engineering*, 35(12), 12345-12356. https://doi.org/10.1109/TKDE.2023.3251721
-
-15. open-spaced-repetition/fsrs-rs. GitHub repository. https://github.com/open-spaced-repetition/fsrs-rs

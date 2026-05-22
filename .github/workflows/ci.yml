@@ -22,10 +22,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: pip install pytest
+        run: pip install pytest pytest-cov
 
-      - name: Run tests
-        run: cd scripts && python -m pytest test_srs.py -v
+      - name: Run tests with coverage
+        run: cd scripts && python -m pytest test_srs.py -v --cov=srs --cov-report=term-missing
 
       - name: Run srs.py smoke test
         run: cd scripts && python srs.py help

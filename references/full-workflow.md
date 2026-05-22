@@ -1,5 +1,6 @@
 # RetainCraft 完整工作流
 
+> **版本**: v1.4.0 | **更新日期**: 2026-05-22 | **状态**: 详细参考文档（SKILL.md 的扩展版）
 > 本文档包含 RetainCraft 的详细流程说明，供 AI 助手按需参考。
 
 ---
@@ -40,6 +41,46 @@
 7. 之前用过什么方法学?效果如何?
 8. 你觉得自己的薄弱环节是什么?
 ```
+
+### Step 0.1:学习契约(Learning Contract)
+
+在评估完成后，与用户确认学习契约，明确双方责任和预期。
+
+**学习契约内容**:
+```
+📝 学习契约
+
+学习者承诺:
+□ 每天投入 [X] 分钟学习时间
+□ 按时完成模块测试和复习任务
+□ 主动向 AI 助手反馈学习困难
+□ 遵循间隔重复的复习安排
+
+AI 助手承诺:
+□ 提供个性化的学习路径和材料
+□ 基于循证方法设计学习活动
+□ 及时记录学习进度和掌握度
+□ 在学习者疲劳时主动调整强度
+
+学习目标:
+□ 短期目标: [用户填写]
+□ 长期目标: [用户填写]
+□ 预期完成时间: [根据路径预估]
+
+确认方式: 用户回复"我同意"即视为契约生效
+```
+
+**契约的作用**:
+- 明确学习者的责任和承诺
+- 建立 AI 助手的服务标准
+- 作为后续学习效果评估的基准
+- 增强学习者的责任感和动力
+
+**技术实现**: 用户确认契约后，AI 助手调用：
+```bash
+python3 scripts/srs.py sign-contract '{"time":"20:00","days":["Mon","Tue","Wed","Thu","Fri"],"duration":60,"target_level":"L4"}'
+```
+代码保存契约到 config.json 并输出 `REMINDER_REQUIRED`，AI 助手根据输出创建平台对应的定时提醒。
 
 ### Step 0.5:预习材料(零基础专用)
 
@@ -205,6 +246,16 @@ Module 2: ...
 - **个性化**: 积累 1000+ 次 review 后可运行 `optimize-params` 优化参数
 - SM-2 备选: ease_factor 初始 2.5,good/hard/easy/wrong 四种评分公式
 
+**optimize-params 命令**:
+```bash
+python3 scripts/srs.py optimize-params [topic]
+```
+- **触发条件**: 积累 1000+ 次 review 记录后
+- **功能**: 基于用户历史数据，使用机器学习优化 FSRS-5 的 19 个参数
+- **输出**: 个性化参数，自动保存到 `config.json` 的 `fsrs_weights` 字段
+- **效果**: 提升复习调度精度，使间隔更贴合个人记忆特点
+- **建议**: 每 6 个月或积累 2000+ 次 review 后重新优化
+
 **⚠️ 本节描述仅供参考,以 scripts/srs.py 源码为准。**
 
 **触发机制**:
@@ -237,6 +288,30 @@ AI发起: "你有 N 个概念需要复习，现在开始吗？"
    - rating 取值：easy / good / hard / wrong
    - 示例：`python3 scripts/srs.py rate 线性代数 矩阵乘法 good`
 3. 注意：`srs.py review` 是交互式命令（需要用户输入），AI 助手不可直接调用。应使用 `srs.py rate` 逐步更新概念状态
+
+### v1.3.0 新增命令
+
+**今日学习概览**:
+```bash
+python3 scripts/srs.py today [topic]
+```
+- 显示今日待复习概念、新概念数量、预计学习时长
+- 可选按 topic 过滤，不指定则显示所有主题
+
+**学习连续天数**:
+```bash
+python3 scripts/srs.py streak [topic]
+```
+- 显示当前连续学习天数、最长连续记录
+- 激励用户保持学习习惯
+
+**学习分析报告**:
+```bash
+python3 scripts/srs.py analyze [topic] [--period 7d|30d|all]
+```
+- 生成学习效果分析：答对率趋势、薄弱知识点、学习效率
+- 支持按时间范围筛选
+- 输出可视化数据（供 AI 助手解读给用户）
 
 ---
 
@@ -279,7 +354,7 @@ AI发起: "你有 N 个概念需要复习，现在开始吗？"
 - 连续 3 次测试低于当前等级阈值 → 降一级
 - 升级要 2 次达标，降级要 3 次不达标——升容易降难
 - 注：最低降到 L2。L1 只在无测试历史时触发
-- 降级后继续检查是否需要进一步降级
+- 每次检查只降一级，不连续降级
 
 **降级阈值**：
 - L3: 0.4 (40%)
@@ -459,7 +534,7 @@ Phase X 完成 → AI 助手必须执行以下检查:
   □ 2. 如果 Phase 3 模块测试:是否已调用 record-test?
   □ 3. 如果 Phase 4 间隔复习:是否已调用 rate 更新每个概念?
   □ 4. 如果 Phase 2.5 实战模拟:是否已调用 record-simulation?
-  □ 5. 是否已将关键进展写入 memory/?
+  □ 5. 是否已将关键进展写入会话笔记?
   □ 6. 用户是否已确认可以进入下一阶段?
 ```
 
@@ -488,13 +563,13 @@ python3 scripts/srs.py check-burnout <topic> [--window N]
 ### 状态保存时间线
 
 ```
-Phase 0 完成 → memory 更新进度
-Phase 1 完成 → memory 更新进度
-Phase 2 完成 → memory 更新进度 + 费曼检验记录
-Phase 2.5 完成 → record-simulation + memory 更新
-Phase 3 完成 → record-test(模块测试) 或 rate(复习) + memory 更新
-Phase 4 完成 → rate 每个复习概念 + memory 更新
-session 结束 → check-session 验证 + memory 最终更新
+Phase 0 完成 → 会话笔记更新进度
+Phase 1 完成 → 会话笔记更新进度
+Phase 2 完成 → 会话笔记更新进度 + 费曼检验记录
+Phase 2.5 完成 → record-simulation + 会话笔记更新
+Phase 3 完成 → record-test(模块测试) 或 rate(复习) + 会话笔记更新
+Phase 4 完成 → rate 每个复习概念 + 会话笔记更新
+session 结束 → check-session 验证 + 会话笔记最终更新
 ```
 
 ---
@@ -505,8 +580,18 @@ session 结束 → check-session 验证 + memory 最终更新
 
 | 系统 | 存什么 | 位置 | 谁读 |
 |------|--------|------|------|
-| **系统 memory** | 学习进度摘要、薄弱点、上次学到哪 | `memory/YYYY-MM-DD.md` + `MEMORY.md` | AI助手每次启动自动读 |
+| **平台笔记** | 学习进度摘要、薄弱点、上次学到哪 | 使用平台原生的笔记/记忆系统 | AI助手每次启动自动读 |
 | **~/learn/** | FSRS-5/SM-2 算法数据、概念掌握度、配置 | `~/learn/topics/{topic}/concepts.json` | `srs.py` 脚本读写 |
+
+### 数据文件清单
+
+| 文件 | 位置 | 用途 | 格式 |
+|------|------|------|------|
+| `concepts.json` | `~/learn/topics/{topic}/` | 概念掌握度、间隔重复状态 | JSON 对象 |
+| `test_history.json` | `~/learn/topics/{topic}/` | 模块测试历史记录、等级变化 | JSON 数组 |
+| `learning_log.json` | `~/learn/topics/{topic}/` | 学习活动日志（费曼检验、模拟等） | JSON 数组 |
+| `config.json` | `~/learn/` | 全局配置（算法选择、阈值等） | JSON 对象 |
+| `profile.json` | `~/learn/` | 用户画像（学习偏好、历史统计） | JSON 对象 |
 
 ### 恢复优先级
 concepts.json > memory 文件
@@ -558,6 +643,8 @@ AI助手收到心跳 →
   "session_duration": 60,           // 单次学习时长(分钟)
   "burnout_threshold": 3,           // 连续错题触发倦怠检测的阈值
   "mastery_threshold": 0.8,         // 答对率超过此值视为掌握
+  "algorithm": "fsrs",              // 算法选择：fsrs(默认) 或 sm2
+  "fsrs_weights": null,             // FSRS 个性化参数（optimize-params 生成，初始为 null）
   "level_thresholds": {             // 等级升降阈值
     "L2": 0.2,
     "L3": 0.4,
@@ -590,6 +677,8 @@ AI助手收到心跳 →
 - **场景库示例**:scripts/scenarios.md
 - **学术引用和效果量**:scripts/evidence.md
 - **等级判定算法**:scripts/srs.py(源码为准)
+- **学习模板库**:scripts/templates.md
+- **模板数据文件**:learning-templates.json
 
 ---
 

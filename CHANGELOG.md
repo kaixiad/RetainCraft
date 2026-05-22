@@ -7,6 +7,27 @@
 
 ---
 
+## [1.4.0] - 2026-05-21
+
+**测试**: 169 个测试全部通过（+10）
+
+### 新增
+- `sign-contract` 命令：学习契约签署 + 跨平台提醒输出（基于 Gollwitzer 1999 实施意图理论）
+- SKILL.md 提醒检查：每次学习开始检查是否有定时提醒，没有则创建
+- `cmd_optimize_params` 测试：4 个测试覆盖梯度下降逻辑（不足1000/评分单一/天数不足/正常优化）
+- `learning_log.json` 大小限制：保留最近 5000 条，防止无限增长
+
+### 修复
+- `import math` 清理：删除 7 处函数内重复导入，只保留顶部 1 处
+- full-workflow.md 更新：8 处修正（学习契约、v1.3.0 命令、配置 JSON、数据文件、参考材料、版本标注）
+- SKILL.md 配置 JSON 完善：添加 algorithm、fsrs_weights、learning_contract、reminder_channels、active_channel 字段
+
+### 重构
+- build-release.py 添加发布前清理逻辑（自动删除旧文件，保留 .git）
+- 文档同步：测试数 159→169、命令数 23→24、版本号 v1.3.0→v1.4.0
+
+---
+
 ## [1.3.0] - 2026-05-17
 
 **测试**: 159 个测试全部通过（+13）
@@ -34,7 +55,7 @@
 
 #### 4 个新命令
 - `today` — 今日学习计划，含逾期分析和建议
-- `streak` — 连续学习天数（Duolingo 模型：从今天算）
+- `streak` — 连续学习天数（从今天倒推计算）
 - `analyze` — 学习趋势分析、薄弱概念、活动统计
 - `optimize-params` — 基于本地 review 历史优化 FSRS-5 参数
   - 数值梯度下降（有限差分），纯 Python 实现
@@ -77,7 +98,7 @@
 | # | 引用 | 用途 |
 |---|------|------|
 | R12 | Su, Ye, Nie, Cao & Chen (2023) — FSRS-5 IEEE TKDE | FSRS-5 实现 |
-| R13 | fsrs-rs 工程实践 | 技术参考 |
+| R13 | FSRS 算法工程实践 | 技术参考 |
 
 ### 文档更新
 - `SKILL.md` 版本 1.3.0，FSRS-5 默认标注

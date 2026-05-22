@@ -2,8 +2,8 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-> 基于循证学习科学的 AI 辅助互动学习协议
-> 整合间隔重复、主动回忆、费曼学习法、交错练习和精细加工提问 5 种科学方法
+> 基于循证学习科学的 AI 辅助互动学习协议（兼容 OpenClaw）
+> 整合间隔重复、主动回忆、费曼学习法、交错练习和因果追问 5 种科学方法
 >
 > *曾用名 "interactive-learning"*
 
@@ -11,13 +11,13 @@
 
 ## 这是什么？
 
-一个 [OpenClaw](https://github.com/openclaw) 技能，把 5 种科学验证的学习方法变成你和 AI 之间的互动系统。
+一个 AI agent 技能（兼容 OpenClaw），把 5 种科学验证的学习方法变成你和 AI 之间的互动系统。
 
 不是"给你材料自己看"——而是 AI 和你一起学、一起练、追踪进度、在你遗忘前提醒你。
 
 ## 核心特性
 
-- **5 种循证方法**整合在一个协议中：分布式练习（d=0.85）、实践测试（d=0.74）、自我解释（d=0.54）、交错练习（d=0.47）、精细加工提问（d=0.56）——效果量均来自 [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) 元分析（242 项研究，16.9 万参与者）。我们将其对应实现为：间隔重复、主动回忆、费曼学习法、交错练习、精细加工提问
+- **5 种循证方法**整合在一个协议中：分布式练习（d=0.85）、实践测试（d=0.74）、自我解释（d=0.54）、交错练习（d=0.47）、精细加工提问（d=0.56）——效果量均来自 [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) 元分析（242 项研究，16.9 万参与者）。我们将其对应实现为：间隔重复（代码级）、主动回忆（混合级）、费曼学习法（AI协议级）、交错练习（AI协议级）、因果追问（AI协议级）。详见下方[执行层说明](#执行层)。
 - **FSRS-5 间隔重复（默认）**：基于 IEEE TKDE 2023 的 ML 调度算法，SM-2 作为备选。积累 1000+ 次复习后可通过 `optimize-params` 个性化参数
 - **摸底考试 + 模块测试**：学前学后对比，量化学习效果
 - **提醒系统**：每日学习计划 + 周报，通过 cron 定时触发，自动检测通知渠道
@@ -87,7 +87,7 @@ retaincraft/
 │   └── pull_request_template.md # PR 模板
 └── scripts/
     ├── srs.py                  # FSRS-5 + SM-2 间隔重复引擎 + 等级系统
-    ├── test_srs.py             # 单元测试（159 个用例）
+    ├── test_srs.py             # 单元测试（169 个用例）
     ├── scenarios.md            # 模拟场景库（7 个场景）
     ├── evidence.md             # 学术引用和效果量
     └── templates.md            # 输出格式模板
@@ -149,25 +149,29 @@ python3 scripts/srs.py today                     # 今日学习计划（含逾�
 python3 scripts/srs.py streak                    # 连续学习天数
 python3 scripts/srs.py analyze                   # 学习趋势和薄弱概念
 python3 scripts/srs.py optimize-params           # 个性化 FSRS-5 参数（需 1000+ 次复习）
+
+# v1.4.0 新增
+python3 scripts/srs.py sign-contract             # 签署学习契约 + 创建提醒
 ```
 
 ## 学术引用
 
-| 方法 | 效果量 | 来源 |
-|------|--------|------|
-| 间隔重复 | d=0.85 | [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) |
-| 主动回忆 | d=0.74 | Donoghue & Hattie 2021 |
-| 精细加工提问 | d=0.56 | Donoghue & Hattie 2021 |
-| 费曼学习法 / 自我解释 | d=0.54 | Donoghue & Hattie 2021 |
-| 交错练习 | d=0.47 | Donoghue & Hattie 2021 |
-| AI 辅导 | 0.63-1.3 SD | [Kestin et al. 2025](https://doi.org/10.1038/s41598-025-97652-6)（哈佛 RCT，N=194） |
-| 实施意图 | — | [Gollwitzer 1999](https://doi.org/10.1037/0003-066X.54.7.493)（学习契约） |
-| 倦怠理论 | — | [Maslach & Leiter 2016](https://doi.org/10.1002/wps.20273)（倦怠检测） |
-| 拖延心理 | — | [Steel 2007](https://doi.org/10.1037/0033-2909.133.1.65)（遗忘风险） |
-| 遗忘曲线 | — | [Ebbinghaus 1885](https://doi.org/10.1371/journal.pone.0120644)（Murre & Dros 2015 验证） |
-| 自我效能感 | — | [Bandura 1997](https://en.wikipedia.org/wiki/Self-efficacy)（周报鼓励语） |
+| 方法 | 效果量 | 执行层 | 来源 |
+|------|--------|--------|------|
+| 间隔重复 | d=0.85 | 🟢 代码级 | [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) |
+| 主动回忆 | d=0.74 | 🟢🟡 混合级 | Donoghue & Hattie 2021 |
+| 因果追问 | d=0.56 | 🔵 AI协议级 | Donoghue & Hattie 2021 |
+| 费曼学习法 / 自我解释 | d=0.54 | 🔵 AI协议级 | Donoghue & Hattie 2021 |
+| 交错练习 | d=0.47 | 🔵 AI协议级 | Donoghue & Hattie 2021 |
+| AI 辅导 | 0.63-1.3 SD | 🟢🟡 混合级 | [Kestin et al. 2025](https://doi.org/10.1038/s41598-025-97652-6)（哈佛 RCT，N=194） |
+| 实施意图 | — | 🟢 代码级 | [Gollwitzer 1999](https://doi.org/10.1037/0003-066X.54.7.493)（学习契约） |
+| 倦怠理论 | — | ⚪ 理论参考 | [Maslach & Leiter 2016](https://doi.org/10.1002/wps.20273)（倦怠检测） |
+| 拖延心理 | — | ⚪ 理论参考 | [Steel 2007](https://doi.org/10.1037/0033-2909.133.1.65)（遗忘风险） |
+| 遗忘曲线 | — | 🟢 代码级 | [Ebbinghaus 1885](https://doi.org/10.1371/journal.pone.0120644)（Murre & Dros 2015 验证） |
+| 自我效能感 | — | ⚪ 理论参考 | [Bandura 1997](https://en.wikipedia.org/wiki/Self-efficacy)（周报鼓励语） |
 
-> 所有 d 值均来自 Donoghue & Hattie (2021) 元分析（242 项研究，1,619 个效果量，169,179 名参与者）。Dunlosky et al. (2013) 使用定性分类（高/中/低效用），而非 Cohen's d。所有引用均经过溯源验证，详见 [evidence.md](scripts/evidence.md)。
+> 🟢 代码强制执行 | 🟢🟡 代码框架+AI内容 | 🔵 AI在会话中执行 | ⚪ 理论参考
+> 所有引用均经过溯源验证，详见 [evidence.md](scripts/evidence.md)。
 
 ## 已知限制
 
@@ -179,7 +183,7 @@ python3 scripts/srs.py optimize-params           # 个性化 FSRS-5 参数（需
 | 版本 | 功能 | 状态 |
 |------|------|------|
 | v1.3.0 | FSRS-5（默认）+ SM-2 备选 + 4 个新命令 + 参数优化 | ✅ 已完成 |
-| v1.4.0 | 多 agent 框架提醒兼容（不仅限 OpenClaw cron） | 计划中 |
+| v1.4.0 | 多 agent 框架提醒兼容 + sign-contract + 学习日志裁剪 | ✅ 已完成 |
 | v1.5.0 | 学习视频搜索 + AI 幻觉防护 | 计划中 |
 
 详见 [CHANGELOG.md](CHANGELOG.md) 版本历史。
@@ -194,7 +198,7 @@ python3 scripts/srs.py optimize-params           # 个性化 FSRS-5 参数（需
 | 效果量数值准确 | ✅ |
 | 研究机构归属正确 | ✅ |
 | 协议逻辑一致 | ✅ |
-| 代码测试通过（159/159） | ✅ |
+| 代码测试通过（169/169） | ✅ |
 
 ## AI 辅助开发声明
 

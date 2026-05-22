@@ -2,7 +2,7 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-> Evidence-based AI-assisted interactive learning protocol for OpenClaw
+> Evidence-based AI-assisted interactive learning protocol for AI agents (OpenClaw compatible)
 >
 > *Previously known as "interactive-learning"*
 
@@ -10,13 +10,13 @@
 
 ## What is this?
 
-An [OpenClaw](https://github.com/openclaw) skill that turns 5 scientifically validated learning methods into an interactive system between you and your AI.
+An [AI agent skill](https://github.com/kaixiad/RetainCraft) (OpenClaw compatible) that turns 5 scientifically validated learning methods into an interactive system between you and your AI.
 
 Not "here's some material, figure it out yourself" — your AI studies with you, quizzes you, tracks your progress, and reminds you before you forget.
 
 ## Features
 
-- **5 evidence-based methods** in one protocol: distributed practice (d=0.85), practice testing (d=0.74), self-explanation (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants). We implement these as: spaced repetition, active recall, Feynman technique, interleaved practice, and elaborative interrogation.
+- **5 evidence-based methods** in one protocol: distributed practice (d=0.85), practice testing (d=0.74), self-explanation (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants). We implement these as: spaced repetition (code-enforced), active recall (hybrid), Feynman technique (AI-guided), interleaved practice (AI-guided), and causal questioning (AI-guided). See [Execution Layer](#execution-layer) below.
 - **FSRS-5 spaced repetition (default)**: ML-based scheduling from IEEE TKDE 2023 research, with SM-2 as fallback. Personalizable via `optimize-params` after 1000+ reviews
 - **Pre-assessment + module tests**: quantifies learning with before/after comparison
 - **Reminder system**: daily learning plans + weekly reports via cron, auto-detects notification channel
@@ -86,7 +86,7 @@ retaincraft/
 │   └── pull_request_template.md # PR template
 └── scripts/
     ├── srs.py                  # SM-2 + FSRS-5 spaced repetition engine + level system
-    ├── test_srs.py             # Unit tests (159 test cases)
+    ├── test_srs.py             # Unit tests (169 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
     ├── evidence.md             # Academic citations and effect sizes
     └── templates.md            # Output format templates
@@ -148,25 +148,29 @@ python3 scripts/srs.py today                     # Today's learning plan with ov
 python3 scripts/srs.py streak                    # Consecutive learning days
 python3 scripts/srs.py analyze                   # Learning trends and weak concepts
 python3 scripts/srs.py optimize-params           # Personalize FSRS-5 weights (needs 1000+ reviews)
+
+# v1.4.0 New
+python3 scripts/srs.py sign-contract             # Sign learning contract + create reminder
 ```
 
 ## Academic References
 
-| Method | Effect Size | Source |
-|--------|------------|--------|
-| Spaced Repetition | d=0.85 | [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) |
-| Active Recall | d=0.74 | Donoghue & Hattie 2021 |
-| Elaborative Interrogation | d=0.56 | Donoghue & Hattie 2021 |
-| Self-Explanation / Feynman | d=0.54 | Donoghue & Hattie 2021 |
-| Interleaved Practice | d=0.47 | Donoghue & Hattie 2021 |
-| AI Tutoring | 0.63-1.3 SD | [Kestin et al. 2025](https://doi.org/10.1038/s41598-025-97652-6) (Harvard RCT, N=194) |
-| Implementation Intentions | — | [Gollwitzer 1999](https://doi.org/10.1037/0003-066X.54.7.493) (Learning Contract) |
-| Burnout Theory | — | [Maslach & Leiter 2016](https://doi.org/10.1002/wps.20273) (Burnout Detection) |
-| Procrastination | — | [Steel 2007](https://doi.org/10.1037/0033-2909.133.1.65) (Forgetting Risk) |
-| Forgetting Curve | — | [Ebbinghaus 1885](https://doi.org/10.1371/journal.pone.0120644) (Murre & Dros 2015 validation) |
-| Self-Efficacy | — | [Bandura 1997](https://en.wikipedia.org/wiki/Self-efficacy) (Weekly Report) |
+| Method | Effect Size | Execution Layer | Source |
+|--------|------------|----------------|--------|
+| Spaced Repetition | d=0.85 | 🟢 Code | [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) |
+| Active Recall | d=0.74 | 🟢🟡 Hybrid | Donoghue & Hattie 2021 |
+| Causal Questioning | d=0.56 | 🔵 AI-Guided | Donoghue & Hattie 2021 |
+| Self-Explanation / Feynman | d=0.54 | 🔵 AI-Guided | Donoghue & Hattie 2021 |
+| Interleaved Practice | d=0.47 | 🔵 AI-Guided | Donoghue & Hattie 2021 |
+| AI Tutoring | 0.63-1.3 SD | 🟢🟡 Hybrid | [Kestin et al. 2025](https://doi.org/10.1038/s41598-025-97652-6) (Harvard RCT, N=194) |
+| Implementation Intentions | — | 🟢 Code | [Gollwitzer 1999](https://doi.org/10.1037/0003-066X.54.7.493) (Learning Contract) |
+| Burnout Theory | — | ⚪ Reference | [Maslach & Leiter 2016](https://doi.org/10.1002/wps.20273) (Burnout Detection) |
+| Procrastination | — | ⚪ Reference | [Steel 2007](https://doi.org/10.1037/0033-2909.133.1.65) (Forgetting Risk) |
+| Forgetting Curve | — | 🟢 Code | [Ebbinghaus 1885](https://doi.org/10.1371/journal.pone.0120644) (Murre & Dros 2015 validation) |
+| Self-Efficacy | — | ⚪ Reference | [Bandura 1997](https://en.wikipedia.org/wiki/Self-efficacy) (Weekly Report) |
 
-> All d values from Donoghue & Hattie (2021) meta-analysis (242 studies, 1,619 effect sizes, 169,179 participants). Dunlosky et al. (2013) uses qualitative classification (high/moderate/low utility), not Cohen's d. All citations verified in [evidence.md](scripts/evidence.md).
+> 🟢 Code-enforced | 🟢🟡 Hybrid (code + AI) | 🔵 AI-guided (conversation) | ⚪ Theoretical reference
+> All citations verified, detailed evidence in [evidence.md](scripts/evidence.md).
 
 ## Known Limitations
 
@@ -178,7 +182,7 @@ python3 scripts/srs.py optimize-params           # Personalize FSRS-5 weights (n
 | Version | Feature | Status |
 |---------|---------|--------|
 | v1.3.0 | FSRS-5 (default) + SM-2 fallback + 4 new commands + optimize-params | ✅ Done |
-| v1.4.0 | Multi-agent-framework reminder (not just OpenClaw cron) | Planned |
+| v1.4.0 | Multi-agent-framework reminder + sign-contract + learning_log pruning | ✅ Done |
 | v1.5.0 | Learning video search + AI hallucination defense | Planned |
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
@@ -193,7 +197,7 @@ This project underwent an independent documentation audit:
 | Effect size numbers accurate | ✅ |
 | Research institution attribution correct | ✅ |
 | Protocol logic consistent | ✅ |
-| Code tests passing (159/159) | ✅ |
+| Code tests passing (169/169) | ✅ |
 
 ## AI-Assisted Development Disclosure
 

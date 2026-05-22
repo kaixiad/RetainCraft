@@ -74,7 +74,7 @@ retaincraft/
 ├── docs/
 └── scripts/
     ├── srs.py                  # SM-2 + FSRS-5 间隔重复引擎
-    ├── test_srs.py             # 单元测试（159 个用例）
+    ├── test_srs.py             # 单元测试（169 个用例）
     ├── scenarios.md            # 场景库示例
     ├── evidence.md             # 学术引用和效果量
     └── templates.md            # 输出格式模板

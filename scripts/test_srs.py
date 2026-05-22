@@ -2304,6 +2304,32 @@ class TestSM2SecondInterval(TestCase):
         updated = calc_next_review(concept, "good", SM2_CONFIG)
         self.assertEqual(updated["interval_days"], 15)  # 6 * 2.5 = 15
 
+    def test_second_review_hard_rating_interval_is_6_days(self):
+        """Test that second review with 'hard' rating also uses SM2_SECOND_INTERVAL=6.
+
+        Bug #1: SM-2 'hard' rating was missing is_second_review check,
+        causing second review interval to be max(1, int(1 * 1.2)) = 1 day
+        instead of SM2_SECOND_INTERVAL = 6 days.
+        Wozniak (1987) specifies second review interval = 6 days regardless of rating.
+        """
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 1
+        concept["interval_days"] = 1
+        concept["ease_factor"] = 2.5
+
+        updated = calc_next_review(concept, "hard", SM2_CONFIG)
+        self.assertEqual(updated["interval_days"], 6)
+
+    def test_third_review_hard_uses_interval_formula(self):
+        """Test that third review with 'hard' uses interval * 1.2 formula."""
+        concept = srs.DEFAULT_CONCEPT.copy()
+        concept["reviews"] = 2
+        concept["interval_days"] = 6
+        concept["ease_factor"] = 2.5
+
+        updated = calc_next_review(concept, "hard", SM2_CONFIG)
+        self.assertEqual(updated["interval_days"], 7)  # max(1, int(6 * 1.2)) = 7
+
     def test_wrong_rating_resets_interval(self):
         """Test that wrong rating resets interval to 1 day."""
         concept = srs.DEFAULT_CONCEPT.copy()
@@ -2321,7 +2347,6 @@ class TestFSRS5Algorithm(TestCase):
 
     Formulas verified against:
     - IEEE TKDE 2023 paper (DOI: 10.1109/TKDE.2023.3251721)
-    - open-spaced-repetition/fsrs-rs deepwiki documentation
     """
 
     def test_fsrs_initial_stability(self):
@@ -2480,6 +2505,257 @@ class TestFSRS5Algorithm(TestCase):
         # FSRS-5 should add difficulty and stability fields
         self.assertIn("difficulty", updated)
         self.assertIn("stability", updated)
+
+
+class TestOptimizeParams(TestCase):
+    """Test cmd_optimize_params gradient descent optimization."""
+
+    def test_optimize_params_insufficient_reviews(self):
+        """Test that optimize-params rejects < 1000 reviews."""
+        from srs import cmd_optimize_params
+        import io
+        from contextlib import redirect_stdout
+
+        # Clear learning log to ensure < 1000 reviews
+        log_path = Path.home() / "learn" / "learning_log.json"
+        if log_path.exists():
+            backup = log_path.read_text(encoding="utf-8")
+        else:
+            backup = None
+
+        try:
+            log_path.write_text("[]", encoding="utf-8")
+            f = io.StringIO()
+            with redirect_stdout(f):
+                cmd_optimize_params([])
+            output = f.getvalue()
+            self.assertIn("1,000", output)
+            self.assertIn("Need at least", output)
+        finally:
+            if backup:
+                log_path.write_text(backup, encoding="utf-8")
+
+    def test_optimize_params_uniform_rating(self):
+        """Test that optimize-params rejects >95% same rating."""
+        from srs import cmd_optimize_params
+        import io
+        from contextlib import redirect_stdout
+
+        log_path = Path.home() / "learn" / "learning_log.json"
+        if log_path.exists():
+            backup = log_path.read_text(encoding="utf-8")
+        else:
+            backup = None
+
+        try:
+            # Generate 1000+ reviews with 99% "good" rating
+            entries = []
+            for i in range(1050):
+                entries.append({
+                    "timestamp": f"2026-04-{(i % 28) + 1:02d}T10:00:00",
+                    "action": "rate",
+                    "topic": "test",
+                    "details": {
+                        "concept": f"concept_{i % 5}",
+                        "rating": "good" if i < 1040 else "wrong"
+                    }
+                })
+            log_path.write_text(json.dumps(entries, ensure_ascii=False), encoding="utf-8")
+
+            f = io.StringIO()
+            with redirect_stdout(f):
+                cmd_optimize_params([])
+            output = f.getvalue()
+            self.assertIn("99%", output)
+            self.assertIn("diverse", output)
+        finally:
+            if backup:
+                log_path.write_text(backup, encoding="utf-8")
+
+    def test_optimize_params_insufficient_different_days(self):
+        """Test that optimize-params rejects < 50 different-day reviews."""
+        from srs import cmd_optimize_params
+        import io
+        from contextlib import redirect_stdout
+
+        log_path = Path.home() / "learn" / "learning_log.json"
+        if log_path.exists():
+            backup = log_path.read_text(encoding="utf-8")
+        else:
+            backup = None
+
+        try:
+            # Generate 1000+ reviews but only on 3 different days
+            entries = []
+            ratings = ["good", "hard", "easy", "wrong"]
+            for i in range(1050):
+                day = (i % 3) + 1
+                entries.append({
+                    "timestamp": f"2026-04-{day:02d}T10:00:00",
+                    "action": "rate",
+                    "topic": "test",
+                    "details": {
+                        "concept": f"concept_{i % 5}",
+                        "rating": ratings[i % 4]
+                    }
+                })
+            log_path.write_text(json.dumps(entries, ensure_ascii=False), encoding="utf-8")
+
+            f = io.StringIO()
+            with redirect_stdout(f):
+                cmd_optimize_params([])
+            output = f.getvalue()
+            self.assertIn("Different-day", output)
+            self.assertIn("50+", output)
+        finally:
+            if backup:
+                log_path.write_text(backup, encoding="utf-8")
+
+    def test_optimize_params_saves_weights(self):
+        """Test that optimize-params saves optimized weights to config."""
+        from srs import cmd_optimize_params, load_config
+        import io
+        from contextlib import redirect_stdout
+
+        log_path = Path.home() / "learn" / "learning_log.json"
+        config_path = Path.home() / "learn" / "config.json"
+        if log_path.exists():
+            log_backup = log_path.read_text(encoding="utf-8")
+        else:
+            log_backup = None
+        if config_path.exists():
+            config_backup = config_path.read_text(encoding="utf-8")
+        else:
+            config_backup = None
+
+        try:
+            # Generate 1000+ reviews across 60+ days with diverse ratings
+            entries = []
+            ratings = ["good", "hard", "easy", "wrong"]
+            for i in range(1100):
+                day = (i % 60) + 1
+                entries.append({
+                    "timestamp": f"2026-{(i // 60) + 1:02d}-{day:02d}T10:00:00",
+                    "action": "rate",
+                    "topic": "test",
+                    "details": {
+                        "concept": f"concept_{i % 10}",
+                        "rating": ratings[i % 4]
+                    }
+                })
+            log_path.write_text(json.dumps(entries, ensure_ascii=False), encoding="utf-8")
+
+            # Remove fsrs_weights from config
+            config = json.loads(config_backup) if config_backup else {}
+            config.pop("fsrs_weights", None)
+            config_path.write_text(json.dumps(config, ensure_ascii=False), encoding="utf-8")
+
+            f = io.StringIO()
+            with redirect_stdout(f):
+                cmd_optimize_params([])
+            output = f.getvalue()
+            self.assertIn("Optimized parameters saved", output)
+
+            # Verify weights were saved
+            from srs import load_config
+            saved_config = load_config(use_cache=False)
+            self.assertIn("fsrs_weights", saved_config)
+            self.assertEqual(len(saved_config["fsrs_weights"]), 19)
+        finally:
+            if log_backup:
+                log_path.write_text(log_backup, encoding="utf-8")
+            if config_backup:
+                config_path.write_text(config_backup, encoding="utf-8")
+
+
+class TestSignContract(TestCase):
+    """Test cmd_sign_contract command."""
+
+    def test_sign_contract_normal(self):
+        """Test normal JSON input saves contract and outputs REMINDER_REQUIRED."""
+        from srs import cmd_sign_contract, load_config
+        import io
+        from contextlib import redirect_stdout
+
+        config_path = Path.home() / "learn" / "config.json"
+        if config_path.exists():
+            backup = config_path.read_text(encoding="utf-8")
+        else:
+            backup = None
+
+        try:
+            contract_json = '{"time":"20:00","days":["Mon","Tue","Wed"],"duration":60,"target_level":"L4"}'
+            f = io.StringIO()
+            with redirect_stdout(f):
+                cmd_sign_contract([contract_json])
+            output = f.getvalue()
+
+            self.assertIn("Learning contract saved", output)
+            self.assertIn("REMINDER_REQUIRED", output)
+            self.assertIn("20:00", output)
+
+            # Verify contract was saved to config
+            saved_config = load_config(use_cache=False)
+            self.assertIn("learning_contract", saved_config)
+            self.assertEqual(saved_config["learning_contract"]["time"], "20:00")
+        finally:
+            if backup:
+                config_path.write_text(backup, encoding="utf-8")
+
+    def test_sign_contract_invalid_json(self):
+        """Test invalid JSON input shows error without crashing."""
+        from srs import cmd_sign_contract
+        import io
+        from contextlib import redirect_stdout
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            cmd_sign_contract(["not valid json"])
+        output = f.getvalue()
+
+        self.assertIn("Invalid JSON", output)
+
+    def test_sign_contract_no_args(self):
+        """Test missing arguments shows usage hint."""
+        from srs import cmd_sign_contract
+        import io
+        from contextlib import redirect_stdout
+
+        f = io.StringIO()
+        with redirect_stdout(f):
+            cmd_sign_contract([])
+        output = f.getvalue()
+
+        self.assertIn("Usage", output)
+
+    def test_sign_contract_config_roundtrip(self):
+        """Test that saved contract can be read back correctly."""
+        from srs import cmd_sign_contract, load_config
+        import io
+        from contextlib import redirect_stdout
+
+        config_path = Path.home() / "learn" / "config.json"
+        if config_path.exists():
+            backup = config_path.read_text(encoding="utf-8")
+        else:
+            backup = None
+
+        try:
+            contract = {"time": "09:30", "days": ["Mon", "Wed", "Fri"], "duration": 45, "target_level": "L3"}
+            f = io.StringIO()
+            with redirect_stdout(f):
+                cmd_sign_contract([json.dumps(contract)])
+            output = f.getvalue()
+
+            self.assertIn("REMINDER_REQUIRED", output)
+
+            saved = load_config(use_cache=False)
+            self.assertEqual(saved["learning_contract"]["time"], "09:30")
+            self.assertEqual(saved["learning_contract"]["target_level"], "L3")
+            self.assertEqual(len(saved["learning_contract"]["days"]), 3)
+        finally:
+            if backup:
+                config_path.write_text(backup, encoding="utf-8")
 
 
 if __name__ == "__main__":

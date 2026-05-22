@@ -3,13 +3,13 @@ name: retaincraft
 description: >
   AI learning assistant with distributed practice (d=0.85), practice testing (d=0.74),
   self-explanation (d=0.54), interleaved practice (d=0.47), and elaborative interrogation (d=0.56).
-  Implements these as: spaced repetition, active recall, Feynman technique, interleaved practice, and study planning.
+  Implements these as: spaced repetition, active recall, Feynman technique, interleaved practice, and causal questioning.
   Features: FSRS-5 spaced repetition (default, ML-based), SM-2 fallback, forgetting curve alerts, burnout detection,
   learning contracts, weekly reports, module tests, progress tracking.
   基于循证学习科学的 AI 辅助学习协议：分布式练习、实践测试、自我解释、交错练习、精细加工提问。
-  对应实现为：间隔重复、主动回忆、费曼学习法、交错练习、学习规划。
+  对应实现为：间隔重复、主动回忆、费曼学习法（AI协议级）、交错练习、因果追问（AI协议级）。
   功能：FSRS-5 间隔重复调度、遗忘曲线提醒、倦怠检测、学习契约、周报、模块测试、进度追踪。
-version: 1.3.0
+version: 1.4.0
 author: kaixiad
 license: MIT
 homepage: https://github.com/kaixiad/RetainCraft
@@ -69,7 +69,7 @@ Evidence-based AI-assisted interactive learning protocol
 
 **📦 Source Code (源码)**: [https://github.com/kaixiad/RetainCraft](https://github.com/kaixiad/RetainCraft)
 
-> **RetainCraft** by [kaixiad](https://github.com/kaixiad) — 159 unit tests, 15 academic citations, zero dependencies.
+> **RetainCraft** by [kaixiad](https://github.com/kaixiad) — 169 unit tests, 14 academic citations, zero dependencies.
 > If you find this useful, a ⭐ on GitHub would mean a lot.
 **📖 Detailed workflow (详细流程)**: [references/full-workflow.md](references/full-workflow.md)
 
@@ -79,6 +79,8 @@ Evidence-based AI-assisted interactive learning protocol
 ---
 
 ## ⚠️ Execution Checklist (执行清单)
+
+> All commands use paths relative to this SKILL.md's directory. 以下所有命令路径相对于本文件所在目录。
 
 **Must read before each learning session (每次学习开始前必须读)**
 
@@ -109,12 +111,12 @@ Evidence-based AI-assisted interactive learning protocol
    - Each upgrade requires 2 consecutive passes
    - 每次升级需要连续 2 次达标
 
-5. **First learning session must setup reminder (首次学习必须设置提醒)**:
-   ```bash
-   python3 scripts/srs.py setup-reminder
-   ```
-   Not executing = no scheduled reminders = learning interruption risk.
-   不执行 = 没有定时提醒 = 学习中断风险。
+5. **Ensure learning reminder is active (确保学习提醒已生效)**:
+   - Check if a timed learning reminder exists for this user
+   - If yes → continue normally
+   - If no → trigger Step 0.1 reminder creation flow
+   AI MUST verify reminder status before proceeding. Missing reminder = learning risk.
+   AI 必须确认提醒状态再继续。无提醒 = 学习中断风险。
 
 6. **Manual reminder if not received (未收到提醒可手动执行)**:
    ```bash
@@ -122,11 +124,10 @@ Evidence-based AI-assisted interactive learning protocol
    ```
 
 7. **Check reminder status (检查提醒状态)**:
-   ```bash
-   python3 scripts/srs.py check-reminder
-   ```
+   - **OpenClaw**: `python3 scripts/srs.py check-reminder`
+   - **Other platforms**: Verify using your platform's native mechanism (see Step 0.1 "Reminder check at session start")
 
-8. **Switch reminder channel (切换提醒渠道)**:
+8. **Switch reminder channel (切换提醒渠道 — OpenClaw only)**:
    ```bash
    python3 scripts/srs.py switch-channel
    ```
@@ -135,18 +136,18 @@ Evidence-based AI-assisted interactive learning protocol
 
 ## 📚 Core Methodology (核心方法论 - 循证)
 
-| Method (方法) | Effect Size (效果量) | Source (来源) |
-|---------------|---------------------|---------------|
-| Distributed Practice → 间隔重复 | d=0.85 | Donoghue & Hattie 2021 |
-| Practice Testing → 主动回忆 | d=0.74 | Donoghue & Hattie 2021 |
-| Self-Explanation → 费曼学习法 | d=0.54* | Donoghue & Hattie 2021 |
-| Interleaved Practice → 交错练习 | d=0.47 | Donoghue & Hattie 2021 |
-| Elaborative Interrogation → 精细加工提问 | d=0.56 | Donoghue & Hattie 2021 |
-| AI Tutoring (AI 辅导) | 0.63-1.3 SD | Kestin et al. 2025 RCT |
+| Method (方法) | Effect Size (效果量) | 执行层 | v1.5.0 目标 | Source (来源) |
+|---------------|---------------------|--------|------------|---------------|
+| Distributed Practice → 间隔重复 | d=0.85 | 🟢 代码级 | 🟢 | Donoghue & Hattie 2021 |
+| Practice Testing → 主动回忆 | d=0.74 | 🟢🟡 混合级 | 🟢🟡 | Donoghue & Hattie 2021 |
+| Self-Explanation → 费曼学习法 | d=0.54* | 🔵 AI协议级 | 🔵 | Donoghue & Hattie 2021 |
+| Interleaved Practice → 交错练习 | d=0.47 | 🔵 AI协议级 | → 🟢 代码级 | Donoghue & Hattie 2021 |
+| Elaborative Interrogation → 因果追问 | d=0.56 | 🔵 AI协议级 | 🔵 | Donoghue & Hattie 2021 |
+| AI Tutoring (AI 辅导) | 0.63-1.3 SD | 🟢🟡 混合级 | 🟢🟡 | Kestin et al. 2025 RCT |
 
 > **Note (注)**: *d=0.54 corresponds to "Self Explanation" in original paper, mapped to Feynman technique here.
 > *d=0.54 对应原文"自我解释"，此处映射为费曼学习法。
-> **Reference (参考)**: scripts/evidence.md (detailed citations)
+> **Execution Layer (执行层)**: 🟢 代码强制执行 | 🟢🟡 代码框架+AI内容 | 🔵 AI在会话中执行
 
 ---
 
@@ -195,6 +196,22 @@ Evidence-based AI-assisted interactive learning protocol
 ```
 
 **Scientific basis (科学依据)**: Gollwitzer (1999) - Implementation intentions. Specific plans increase execution rate by d=0.65.
+
+**Reminder creation (提醒创建)**:
+After user confirms the learning contract, AI MUST create a timed reminder:
+1. Extract learning time from the contract (e.g., "每天 20:00")
+2. Create a reminder using whatever mechanism your platform provides:
+   - OpenClaw → `openclaw cron add`
+   - WorkBuddy → natural language automation
+   - Claude Code → `/schedule` command
+   - Other → tell user to set up manually
+3. Tell user: "提醒已设置，每天 XX:XX 会提醒你学习"
+4. If creation fails → tell user the fallback plan
+
+**Reminder check at session start (会话开始时提醒检查)**:
+Every time a learning session starts, check if the user has a timed reminder.
+- If yes → continue normally
+- If no → create one (time from learning plan, message: "该复习了！")
 
 ### Step 0.5: Pre-study Materials (预习材料 - 零基础专用)
 - Trigger: user self-assesses as "complete beginner"
@@ -256,6 +273,8 @@ Evidence-based AI-assisted interactive learning protocol
 ### Phase 2: Feynman Check (费曼检验 - 15-20 min)
 - User explains to AI, AI plays "confused student"
 - 用户向 AI 解释所学，AI 扮演"不懂的学生"追问
+- **Scoring**: 3 questions × 10 pts (Accuracy 4 + Depth 3 + Examples 3)
+- Each ≥7 pts = pass; all 3 must pass (与模块测试评分规则一致)
 
 ### Phase 2.5: Simulation (实战模拟 - 15-20 min)
 - Recommend 2-3 scenarios, user chooses, execute 3-5 rounds
@@ -274,6 +293,12 @@ Evidence-based AI-assisted interactive learning protocol
 | Purpose (目的) | Strengthen memory (强化记忆) | Phase assessment (阶段性评估) |
 | Impact (影响) | No level change (不影响等级) | Determines level (决定等级升降) |
 | Command (命令) | srs.py rate | srs.py record-test |
+
+**Decision rule (判定规则)**:
+- First completion of a module → Module Test (`record-test`)
+- Retest after fixing weak areas → Module Test (`record-test`)
+- Daily review / spaced repetition due → Review (`rate`)
+- Rule of thumb: If the result could change the user's level → Module Test. Otherwise → Review.
 
 ### Phase 4: Spaced Repetition (间隔复习 - SM-2/FSRS-5)
 - Based on spaced repetition schedule (SM-2 or FSRS-5, configurable), proactive reminders when due
@@ -324,6 +349,7 @@ Evidence-based AI-assisted interactive learning protocol
 | Correct answer for test (出测试题的正确答案) | ✅ |
 | Feynman check judgment (费曼检验时判断对错) | ✅ |
 | Planning learning path (规划学习路径) | ✅ |
+| Basic common knowledge (基础常识) | ❌ |
 | Flow conversation (流程性对话) | ❌ |
 
 **Rule (规则)**: Factual statements must include source links
@@ -337,7 +363,7 @@ Evidence-based AI-assisted interactive learning protocol
 ```
 □ Current phase core output completed? (当前 Phase 核心产出已完成?)
 □ If module test: record-test called? (如果模块测试：已调用 record-test?)
-□ Key progress written to memory/? (关键进展已写入 memory/?)
+□ Key progress written to session notes? (关键进展已写入会话笔记?)
 ```
 
 ### Check Commands (检测命令)
@@ -354,11 +380,13 @@ python3 scripts/srs.py check-burnout <topic>   # Analyze burnout risk
 
 | System (系统) | Stores (存什么) | Location (位置) |
 |---------------|-----------------|-----------------|
-| System memory (系统 memory) | Progress summary, weak points (进度摘要、薄弱点) | memory/YYYY-MM-DD.md |
+| Platform notes (平台笔记) | Progress summary, weak points (进度摘要、薄弱点) | Use your platform's native notes/memory |
 | ~/learn/ | SRS data, concept mastery (间隔重复数据、概念掌握度) | ~/learn/topics/{topic}/concepts.json |
 
 ### Recovery Priority (恢复优先级)
-concepts.json > memory files (concepts.json > memory 文件)
+concepts.json > session notes (concepts.json > 笔记)
+> The critical data is in concepts.json. Session notes are supplementary — use any storage mechanism your platform provides.
+> 关键数据在 concepts.json。会话笔记是辅助性的——用你平台自带的任何存储方式。
 
 ---
 
@@ -376,15 +404,57 @@ AI 助手收到心跳 → python3 scripts/srs.py due → 有到期内容 → 通
 ```
 ~/learn/config.json
 {
-  "learning_depth": "standard",    // shallow / standard / deep
-  "learner_type": "practical",     // visual / practical / theoretical
+  "algorithm": "fsrs",           // fsrs (default) / sm2
+  "fsrs_weights": null,          // Personalized FSRS weights (optimize-params generates)
+  "learning_depth": "standard",  // shallow / standard / deep
+  "learner_type": "practical",   // visual / practical / theoretical
   "daily_review_limit": 20,
   "session_duration": 60,
   "burnout_threshold": 3,
   "mastery_threshold": 0.8,
-  "level_thresholds": { "L2": 0.2, "L3": 0.4, "L4": 0.7, "L5": 0.9 }
+  "level_thresholds": { "L2": 0.2, "L3": 0.4, "L4": 0.7, "L5": 0.9 },
+  "learning_contract": {},       // Saved by sign-contract (time, days, duration, target_level)
+  "reminder_channels": [],       // Managed by setup-reminder
+  "active_channel": null         // Current reminder channel
 }
 ```
+
+---
+
+## 🧬 Personalized Parameters (个性化参数优化)
+
+**FSRS-5 支持个性化参数优化**，让算法适应每个用户的记忆特征。
+
+```bash
+python3 srs.py optimize-params
+```
+
+**前置条件**：
+- 需要 1,000+ 条 review 记录（FSRS 社区经验：低于此会过拟合）
+- 需要多样化的 rating 分布（>95% 相同 rating = 无效信号）
+- 建议每 2-3 个月优化一次，不要频繁优化
+
+**优化过程**：
+- 使用数值梯度下降（有限差分）最小化 BCE 损失
+- 优化 w[0]-w[14]（15/19 个参数）
+- 跳过 w[15]-w[18]（hard/easy 系数 + 短期学习参数，数据不足）
+- 结果保存到 config.json 的 `fsrs_weights` 字段
+
+**何时触发**：
+- 当用户积累了足够 review 数据时，AI 应主动建议运行 `optimize-params`
+- 新参数需要 2 周观察期才能评估效果
+
+---
+
+## 📋 Quick Command Reference (命令速查)
+
+**Core**: `init`, `add`, `review`, `rate`, `due`, `status`
+**Analytics**: `today`, `streak`, `analyze`, `weekly-report`, `reminder`
+**Tests**: `record-test`, `test-history`, `record-simulation`, `simulation-history`
+**Config**: `config`, `sign-contract`, `setup-reminder`, `optimize-params`
+**Diagnostics**: `profile`, `check-session`, `check-burnout`
+
+> Full CLI reference with examples: README.md
 
 ---
 

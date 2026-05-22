@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # =============================================================================
-# RetainCraft v1.3.0 — 间隔重复学习系统
+# RetainCraft v1.4.0 — 间隔重复学习系统
 #
-# 文件用途：主程序，包含 FSRS-5/SM-2 算法、23 个 CLI 命令、数据持久化
-# 代码行数：~2773 行
-# 测试覆盖：159 个测试（test_srs.py）
+# 文件用途：主程序，包含 FSRS-5/SM-2 算法、24 个 CLI 命令、数据持久化
+# 测试覆盖：169 个测试（test_srs.py）
 # 外部依赖：零（仅 Python 标准库）
 #
 # === 文件结构概览 ===
@@ -69,6 +68,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 import re
 import subprocess
@@ -152,10 +152,10 @@ SCRIPTS_DIR = Path(__file__).parent
 SM2_SECOND_INTERVAL = 6
 
 DEFAULT_CONFIG = {
-    "learning_depth": "standard",
-    "learner_type": "practical",
+    "learning_depth": "standard",  # Reserved for AI protocol, not read by srs.py
+    "learner_type": "practical",   # Reserved for AI protocol, not read by srs.py
     "daily_review_limit": 20,
-    "session_duration": 60,
+    "session_duration": 60,        # Reserved for AI protocol, not read by srs.py
     "burnout_threshold": 3,
     "mastery_threshold": 0.8,
     "algorithm": "fsrs",  # v1.3.0: FSRS-5 as default (was SM-2)
@@ -261,6 +261,9 @@ def append_learning_log(action: str, topic: str, details: dict[str, Any]) -> Non
     """
     Append an entry to the learning log.
 
+    Design intent: Keeps learning_log.json bounded to prevent unbounded growth.
+    Retains the most recent 5000 entries. Older entries are pruned on append.
+
     Args:
         action: Action type (e.g., "rate", "record-test")
         topic: Topic name
@@ -274,6 +277,12 @@ def append_learning_log(action: str, topic: str, details: dict[str, Any]) -> Non
         **details
     }
     log.append(entry)
+
+    # Prune to most recent 5000 entries to prevent unbounded growth
+    MAX_LOG_ENTRIES = 5000
+    if len(log) > MAX_LOG_ENTRIES:
+        log = log[-MAX_LOG_ENTRIES:]
+
     LEARNING_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     _atomic_json_save(LEARNING_LOG_FILE, log)
 
@@ -1069,7 +1078,7 @@ def _calc_next_review_fsrs(c: dict[str, Any], rating: str) -> dict[str, Any]:
     Design intent: Separated from SM-2 logic for clarity.
     Falls back to SM-2 on any calculation error (defensive).
     """
-    import math
+
     rating_int = RATING_TO_INT.get(rating, 3)
 
     # Initialize FSRS fields on first review
@@ -1121,8 +1130,8 @@ def calc_next_review(concept: dict[str, Any], rating: str, config: dict[str, Any
     Calculate next review using SM-2 or FSRS-5 based on config.
 
     Design intent: Dispatch to algorithm-specific implementation.
-    Default is SM-2 for backward compatibility (R2).
-    FSRS-5 is used when config.algorithm = "fsrs".
+    Default is FSRS-5 (since v1.3.0).
+    Falls back to SM-2 when config.algorithm = "sm2".
 
     Args:
         concept: Concept dictionary with scheduling parameters
@@ -1171,7 +1180,10 @@ def calc_next_review(concept: dict[str, Any], rating: str, config: dict[str, Any
         c["interval_days"] = 1
         c["ease_factor"] = max(1.3, c["ease_factor"] - 0.2)
     elif rating == "hard":
-        c["interval_days"] = max(1, int(c["interval_days"] * 1.2))
+        if is_second_review:
+            c["interval_days"] = SM2_SECOND_INTERVAL
+        else:
+            c["interval_days"] = max(1, int(c["interval_days"] * 1.2))
         c["ease_factor"] = max(1.3, c["ease_factor"] - 0.15)
         c["correct_count"] += 1
     elif rating == "good":
@@ -1211,7 +1223,6 @@ def _update_mastery(c: dict[str, Any], config: dict[str, Any]) -> None:
 
 # --- FSRS-5 Algorithm Implementation ---
 # Based on: IEEE TKDE 2023 (DOI: 10.1109/TKDE.2023.3251721)
-# Verified against: open-spaced-repetition/fsrs-rs deepwiki documentation
 # Self-implemented to maintain zero external dependencies
 
 # FSRS-5 default weights (19 parameters)
@@ -1263,7 +1274,7 @@ def fsrs_init_difficulty(rating: int) -> float:
     Design intent: Exponential formula — higher ratings give lower difficulty.
     Clamped to prevent extreme values.
     """
-    import math
+
     w = FSRS_V5_WEIGHTS
     d = w[4] - math.exp(w[5] * (rating - 1)) + 1
     return max(FSRS_D_MIN, min(FSRS_D_MAX, d))
@@ -1289,7 +1300,7 @@ def fsrs_next_interval(s: float, desired_r: float = 0.9) -> float:
     Design intent: Inverse of retrievability formula.
     For desired_r=0.9 and S=10, interval ≈ 10 days.
     """
-    import math
+
     if s <= 0:
         return 1.0
     interval = s / FSRS_FACTOR * (desired_r ** (1 / FSRS_DECAY) - 1)
@@ -1320,7 +1331,7 @@ def fsrs_stability_after_recall(s: float, d: float, r: float, rating: int) -> fl
     current stability is lower, and retrievability is lower.
     Hard rating applies penalty, Easy rating applies bonus.
     """
-    import math
+
     w = FSRS_V5_WEIGHTS
     hard_penalty = w[15] if rating == 2 else 1.0
     easy_bonus = w[16] if rating == 4 else 1.0
@@ -1338,7 +1349,7 @@ def fsrs_stability_after_forgetting(s: float, d: float, r: float) -> float:
     Design intent: Stability decreases. Higher difficulty and higher previous
     stability lead to larger drops.
     """
-    import math
+
     w = FSRS_V5_WEIGHTS
     s_new = w[11] * (d ** (-w[12])) * ((s + 1) ** w[13] - 1) * math.exp(w[14] * (1 - r))
     return max(FSRS_S_MIN, min(FSRS_S_MAX, s_new))
@@ -1354,7 +1365,7 @@ def fsrs_short_term_stability(s: float, rating: int) -> float:
     Design intent: Adjusts stability for reviews within the same session.
     Simplified from full FSRS-5 (which also uses S^(-w₁₉)).
     """
-    import math
+
     w = FSRS_V5_WEIGHTS
     s_new = s * math.exp(w[17] * (rating - 3 + w[18]))
     return max(FSRS_S_MIN, min(FSRS_S_MAX, s_new))
@@ -1701,7 +1712,7 @@ def cmd_due(args: list[str]) -> None:
 
 # cmd_due: 显示所有到期复习
 # cmd_today: 今日学习计划 + 逾期分析（v1.3.0 新增）
-# cmd_streak: 连续学习天数（Duolingo 模型：从今天算）（v1.3.0 新增）
+# cmd_streak: 连续学习天数（从今天倒推计算）（v1.3.0 新增）
 # cmd_analyze: 学习趋势 + 薄弱概念 + 活动统计（v1.3.0 新增）
 # cmd_optimize_params: FSRS 参数个性化（梯度下降，需 1000+ review）（v1.3.0 新增）
 
@@ -1892,7 +1903,7 @@ def cmd_optimize_params(args: list[str]) -> None:
 
     Saves optimized weights to config.json under 'fsrs_weights' key.
     """
-    import math
+
     log = load_learning_log()
 
     # Collect rate actions (review events)
@@ -2214,7 +2225,24 @@ def cmd_config(args: list[str]) -> None:
 # cmd_weekly_report: 生成周报数据
 #
 # 注意：这些命令依赖 openclaw CLI，仅在 OpenClaw 环境中可用
-# v1.4.0 计划：抽象为 PlatformAdapter，支持多 agent 框架
+# v1.4.0: setup-reminder 添加平台检测，非 OpenClaw 环境自动降级为 REMINDER_REQUIRED
+
+def _is_openclaw_available() -> bool:
+    """Check if openclaw CLI is available on this system.
+
+    Design intent: v1.4.0 multi-agent-framework compatibility.
+    Instead of silently failing when openclaw is not installed,
+    setup-reminder falls back to REMINDER_REQUIRED output.
+    """
+    try:
+        result = subprocess.run(
+            ["openclaw", "--version"],
+            capture_output=True, text=True, timeout=5
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
 
 def _cron_exists(name: str) -> bool:
     """
@@ -2330,7 +2358,31 @@ def _recreate_crons_with_channel(channel: str) -> None:
 
 
 def cmd_setup_reminder(args: list[str]) -> None:
-    """Setup learning reminder and weekly report cron jobs. Ignores args."""
+    """Setup learning reminder and weekly report cron jobs. Ignores args.
+
+    Design intent: v1.4.0 multi-agent-framework compatibility.
+    If openclaw CLI is not available, falls back to REMINDER_REQUIRED output
+    so the AI agent can create a platform-native reminder instead.
+    """
+    # v1.4.0: Platform detection — fallback for non-OpenClaw environments
+    if not _is_openclaw_available():
+        config = load_config()
+        contract = config.get("learning_contract", {})
+        reminder_time = contract.get("time", "09:00")
+        days = contract.get("days", ["Mon", "Tue", "Wed", "Thu", "Fri"])
+        days_str = ", ".join(days)
+
+        print(f"[INFO] OpenClaw CLI not detected. Falling back to platform-agnostic mode.")
+        print(f"")
+        print(f"REMINDER_REQUIRED")
+        print(f"Please create a timed learning reminder for the user:")
+        print(f"  Schedule: daily at {reminder_time}")
+        print(f"  Days: {days_str}")
+        print(f"  Message: Time to study! You have concepts due for review.")
+        print(f"")
+        print(f"Use whatever reminder mechanism your platform supports.")
+        return
+
     config = load_config()
     contract = config.get("learning_contract", {})
     reminder_time = contract.get("time", "09:00")
@@ -2609,6 +2661,47 @@ def cmd_weekly_report(args: list[str]) -> None:
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
+def cmd_sign_contract(args: list[str]) -> None:
+    """Save learning contract to config and output reminder requirement.
+
+    Design intent: When user confirms the learning contract via AI conversation,
+    AI calls this command to persist the contract. The output tells AI to create
+    a timed reminder using whatever mechanism the current platform provides.
+    This is the core of v1.4.0 multi-agent-framework compatibility:
+    code outputs WHAT to do, AI figures out HOW to do it on its platform.
+    """
+    if len(args) < 1:
+        print("Usage: srs.py sign-contract <json_string>")
+        print('Example: srs.py sign-contract \'{"time": "20:00", "days": ["Mon","Tue","Wed","Thu","Fri"], "duration": 60, "target_level": "L4"}\'')
+        return
+
+    try:
+        contract = json.loads(args[0])
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Invalid JSON: {e}")
+        return
+
+    # Save to config
+    config = load_config(use_cache=False)
+    config["learning_contract"] = contract
+    save_config(config)
+
+    # Output reminder requirement for AI
+    reminder_time = contract.get("time", "09:00")
+    days = contract.get("days", ["Mon", "Tue", "Wed", "Thu", "Fri"])
+    days_str = ", ".join(days)
+
+    print(f"[OK] Learning contract saved.")
+    print(f"")
+    print(f"REMINDER_REQUIRED")
+    print(f"Please create a timed learning reminder for the user:")
+    print(f"  Schedule: daily at {reminder_time}")
+    print(f"  Days: {days_str}")
+    print(f"  Message: Time to study! You have concepts due for review.")
+    print(f"")
+    print(f"Use whatever reminder mechanism your platform supports.")
+
+
 # cmd_record_test: 记录模块测试成绩
 # cmd_test_history: 查看测试历史
 # cmd_record_simulation: 记录模拟场景成绩
@@ -2837,7 +2930,7 @@ def cmd_check_burnout(args: list[str]) -> None:
                 print(f"    - {s}")
 
 
-# dispatch 字典：23 个命令的 O(1) 查表路由
+# dispatch 字典：24 个命令的 O(1) 查表路由
 # v1.3.0 重构：246 行 if-elif → 38 行 dispatch 字典
 # 所有 cmd_* 函数统一签名为 (args: list[str])
 
@@ -2876,6 +2969,7 @@ def main() -> None:
         "weekly-report": cmd_weekly_report,
         "check-reminder": cmd_check_reminder,
         "switch-channel": cmd_switch_channel,
+        "sign-contract": cmd_sign_contract,
     }
 
     func = dispatch.get(cmd)
