@@ -17,10 +17,10 @@
 
 ## 核心特性
 
-- **5 种循证方法**整合在一个协议中：分布式练习（d=0.85）、实践测试（d=0.74）、自我解释（d=0.54）、交错练习（d=0.47）、精细加工提问（d=0.56）——效果量均来自 [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) 元分析（242 项研究，16.9 万参与者）。我们将其对应实现为：间隔重复（代码级）、主动回忆（混合级）、费曼学习法（AI协议级）、交错练习（AI协议级）、因果追问（AI协议级）。详见下方[执行层说明](#执行层)。
+- **5 种循证方法**整合在一个协议中：分布式练习（d=0.85）、实践测试（d=0.74）、自我解释（d=0.54）、交错练习（d=0.47）、精细加工提问（d=0.56）——效果量均来自 [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) 元分析（242 项研究，16.9 万参与者）。我们将其对应实现为：间隔重复（代码级）、主动回忆（混合级）、费曼学习法（AI协议级）、交错练习（AI协议级）、因果追问（AI协议级）。详见下方学术引用表的执行层说明。
 - **FSRS-5 间隔重复（默认）**：基于 IEEE TKDE 2023 的 ML 调度算法，SM-2 作为备选。积累 1000+ 次复习后可通过 `optimize-params` 个性化参数
 - **摸底考试 + 模块测试**：学前学后对比，量化学习效果
-- **提醒系统**：每日学习计划 + 周报，通过 cron 定时触发，自动检测通知渠道
+- **提醒系统**：每日学习计划 + 周报，支持各平台原生通知
 - **学习契约**：基于实施意图理论（Gollwitzer 1999）的「如果 X 情况发生，我会做 Y 行动」格式
 - **遗忘风险提醒**：基于 Ebbinghaus 遗忘曲线分析，知识即将遗忘时主动警告
 - **倦怠检测**：连续答错自动降低难度或建议休息
@@ -38,11 +38,15 @@
 ## 安装
 
 ```bash
-# 从 ClawHub 安装
+# OpenClaw（从 ClawHub 安装）
 openclaw skills install retaincraft
 
-# 手动安装
+# OpenClaw（手动安装）
 git clone https://github.com/kaixiad/RetainCraft.git ~/.openclaw/workspace/skills/retaincraft
+
+# WorkBuddy / Claude Code / 其他 AI agent
+git clone https://github.com/kaixiad/RetainCraft.git
+# 然后将你的 agent 指向 SKILL.md 文件
 ```
 
 ## 使用方法
@@ -60,7 +64,7 @@ AI 会自动启动完整的学习流程。
 
 1. **创建主题**：AI 执行 `srs.py init <topic>`
 2. **添加概念**：AI 发现并添加核心概念
-3. **设置提醒**：AI 执行 `srs.py setup-reminder` 创建每日学习提醒
+3. **设置提醒**：AI 创建每日学习提醒（OpenClaw 用 `setup-reminder`，其他平台用 sign-contract 流程）
 4. **签订学习契约**：AI 帮你制定「如果 X，那么 Y」的计划（Gollwitzer 1999）
 
 ### 每日学习流程
@@ -81,12 +85,15 @@ retaincraft/
 ├── CHANGELOG.md                # 版本变更记录
 ├── CONTRIBUTING.md             # 贡献指南
 ├── requirements.txt            # Python 版本要求
+├── learning-templates.json     # 预置学习模板
+├── references/
+│   └── full-workflow.md        # 详细工作流参考
 ├── .github/
 │   ├── workflows/ci.yml        # GitHub Actions CI/CD
 │   ├── ISSUE_TEMPLATE/         # Issue 模板
 │   └── pull_request_template.md # PR 模板
 └── scripts/
-    ├── srs.py                  # FSRS-5 + SM-2 间隔重复引擎 + 等级系统
+    ├── srs.py                  # FSRS-5（默认）+ SM-2 间隔重复引擎 + 等级系统
     ├── test_srs.py             # 单元测试（169 个用例）
     ├── scenarios.md            # 模拟场景库（7 个场景）
     ├── evidence.md             # 学术引用和效果量
@@ -134,7 +141,7 @@ python3 scripts/srs.py check-session [topic]     # 检查未记录的测试
 python3 scripts/srs.py check-burnout <topic>     # 分析倦怠风险
 
 # 提醒命令
-python3 scripts/srs.py setup-reminder            # 创建学习提醒和周报定时任务
+python3 scripts/srs.py setup-reminder            # 创建学习提醒和周报（OpenClaw）
 python3 scripts/srs.py reminder                  # 生成今日学习计划
 python3 scripts/srs.py weekly-report             # 生成周报数据
 python3 scripts/srs.py check-reminder            # 检查提醒状态

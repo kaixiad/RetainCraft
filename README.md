@@ -16,10 +16,10 @@ Not "here's some material, figure it out yourself" — your AI studies with you,
 
 ## Features
 
-- **5 evidence-based methods** in one protocol: distributed practice (d=0.85), practice testing (d=0.74), self-explanation (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants). We implement these as: spaced repetition (code-enforced), active recall (hybrid), Feynman technique (AI-guided), interleaved practice (AI-guided), and causal questioning (AI-guided). See [Execution Layer](#execution-layer) below.
+- **5 evidence-based methods** in one protocol: distributed practice (d=0.85), practice testing (d=0.74), self-explanation (d=0.54), interleaved practice (d=0.47), elaborative interrogation (d=0.56) — all effect sizes from [Donoghue & Hattie 2021](https://doi.org/10.3389/feduc.2021.581216) meta-analysis (242 studies, 169k participants). We implement these as: spaced repetition (code-enforced), active recall (hybrid), Feynman technique (AI-guided), interleaved practice (AI-guided), and causal questioning (AI-guided). See Academic References below for execution layer details.
 - **FSRS-5 spaced repetition (default)**: ML-based scheduling from IEEE TKDE 2023 research, with SM-2 as fallback. Personalizable via `optimize-params` after 1000+ reviews
 - **Pre-assessment + module tests**: quantifies learning with before/after comparison
-- **Reminder system**: daily learning plans + weekly reports via cron, auto-detects notification channel
+- **Reminder system**: daily learning plans + weekly reports, platform-native notifications
 - **Learning contract**: "If X happens, I will do Y" format based on implementation intentions (Gollwitzer 1999)
 - **Forgetting risk**: Ebbinghaus curve analysis, warns when knowledge is about to decay
 - **Burnout detection**: auto-lowers difficulty or suggests breaks after consecutive mistakes
@@ -37,11 +37,15 @@ Not "here's some material, figure it out yourself" — your AI studies with you,
 ## Installation
 
 ```bash
-# From ClawHub
+# OpenClaw (from ClawHub)
 openclaw skills install retaincraft
 
-# Manual
+# OpenClaw (manual)
 git clone https://github.com/kaixiad/RetainCraft.git ~/.openclaw/workspace/skills/retaincraft
+
+# WorkBuddy / Claude Code / Other AI agents
+git clone https://github.com/kaixiad/RetainCraft.git
+# Then point your agent to the SKILL.md file
 ```
 
 ## Usage
@@ -59,7 +63,7 @@ The AI will automatically start the full learning workflow.
 
 1. **Create a topic**: AI runs `srs.py init <topic>`
 2. **Add concepts**: AI discovers and adds key concepts
-3. **Setup reminders**: AI runs `srs.py setup-reminder` to create daily study reminders
+3. **Setup reminders**: AI creates timed learning reminders (via `setup-reminder` on OpenClaw, or sign-contract on other platforms)
 4. **Sign a learning contract**: AI helps you create "If X, then Y" plans (Gollwitzer 1999)
 
 ### Daily Workflow
@@ -80,12 +84,15 @@ retaincraft/
 ├── CHANGELOG.md                # Version history
 ├── CONTRIBUTING.md             # Contribution guide
 ├── requirements.txt            # Python version requirement
+├── learning-templates.json     # Pre-built learning templates
+├── references/
+│   └── full-workflow.md        # Detailed workflow reference
 ├── .github/
 │   ├── workflows/ci.yml        # GitHub Actions CI/CD
 │   ├── ISSUE_TEMPLATE/         # Issue templates
 │   └── pull_request_template.md # PR template
 └── scripts/
-    ├── srs.py                  # SM-2 + FSRS-5 spaced repetition engine + level system
+    ├── srs.py                  # FSRS-5 (default) + SM-2 spaced repetition engine + level system
     ├── test_srs.py             # Unit tests (169 test cases)
     ├── scenarios.md            # Simulation scenario library (7 scenarios)
     ├── evidence.md             # Academic citations and effect sizes
