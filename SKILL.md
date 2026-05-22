@@ -1,14 +1,12 @@
 ---
 name: retaincraft
 description: >
-  AI learning assistant with distributed practice (d=0.85), practice testing (d=0.74),
-  self-explanation (d=0.54), interleaved practice (d=0.47), and elaborative interrogation (d=0.56).
-  Implements these as: spaced repetition, active recall, Feynman technique, interleaved practice, and causal questioning.
-  Features: FSRS-5 spaced repetition (default, ML-based), SM-2 fallback, forgetting curve alerts, burnout detection,
-  learning contracts, weekly reports, module tests, progress tracking.
-  基于循证学习科学的 AI 辅助学习协议：分布式练习、实践测试、自我解释、交错练习、精细加工提问。
-  对应实现为：间隔重复、主动回忆、费曼学习法（AI协议级）、交错练习、因果追问（AI协议级）。
-  功能：FSRS-5 间隔重复调度、遗忘曲线提醒、倦怠检测、学习契约、周报、模块测试、进度追踪。
+  Spaced repetition & FSRS-5 AI learning assistant with active recall, Feynman technique, interleaved practice, causal questioning.
+  间隔重复FSRS-5 AI学习助手，整合主动回忆、费曼学习法、交错练习、因果追问。
+  Evidence-based: distributed practice d=0.85, practice testing d=0.74, AI tutoring 0.63-1.3 SD.
+  Multi-platform compatible: OpenClaw, WorkBuddy, Claude Code, Hermes Agent.
+  Features: FSRS-5 spaced repetition (default), SM-2 fallback, forgetting curve, burnout detection, learning contract, weekly report.
+  169 tests, 24 CLI commands, 14 academic citations, zero external dependencies.
 version: 1.4.0
 author: kaixiad
 license: MIT
