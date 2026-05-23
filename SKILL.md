@@ -395,6 +395,9 @@ AI receives heartbeat → python3 scripts/srs.py due → Has due content → Not
 AI 助手收到心跳 → python3 scripts/srs.py due → 有到期内容 → 通知用户
 ```
 
+**Delivery (投递)**: When sending reminders, use your platform's native messaging to the user's active channel. Do not rely on implicit target resolution.
+**发送提醒时**：使用你平台的原生消息机制发送到用户的活跃渠道。不要依赖隐式目标解析。
+
 ---
 
 ## ⚙️ Configuration (配置系统)
@@ -479,3 +482,14 @@ python3 srs.py optimize-params
 - Max 3 topics simultaneously (最多同时 3 个主题)
 - Each topic has independent concepts.json (每个主题独立的 concepts.json)
 - Reviews can cross topics - interleaving (复习可以跨主题 - 交错练习)
+
+---
+
+## 🆕 What's New in v1.4 (v1.4 更新)
+
+- **Multi-agent reminder**: sign-contract command + REMINDER_REQUIRED output for any platform
+- **Cross-platform**: compatible with OpenClaw, WorkBuddy, Claude Code, Hermes Agent
+- **SKILL.md**: platform-aware execution checklist, compact command reference
+- **srs.py**: `_is_openclaw_available()` platform detection + automatic fallback
+
+> Full changelog: [CHANGELOG.md on GitHub](https://github.com/kaixiad/RetainCraft/blob/main/CHANGELOG.md)

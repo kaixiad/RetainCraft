@@ -2257,15 +2257,27 @@ class TestReminderCommands(TestCase):
             self.assertTrue(srs._cron_exists("retaincraft-reminder"))
 
     def test_get_user_channel_from_sessions(self):
-        """Test _get_user_channel detects channel from main session."""
+        """Test _get_user_channel detects channel from session key."""
         from unittest.mock import patch
         with patch('subprocess.run') as mock_run:
             mock_run.return_value = type('obj', (object,), {
                 'returncode': 0,
-                'stdout': '{"sessions": [{"type": "main", "origin": {"provider": "qqbot"}}]}',
+                'stdout': '{"sessions": [{"key": "agent:main:openclaw-weixin:direct:o9cq801e3kFWHOCswT34SlzTD8Ss@im.wechat", "kind": "direct"}]}',
                 'stderr': ''
             })()
-            self.assertEqual(srs._get_user_channel(), "qqbot")
+            self.assertEqual(srs._get_user_channel(), "openclaw-weixin")
+
+    def test_get_user_delivery_from_sessions(self):
+        """Test _get_user_delivery returns (channel, chat_id) from session key."""
+        from unittest.mock import patch
+        with patch('subprocess.run') as mock_run:
+            mock_run.return_value = type('obj', (object,), {
+                'returncode': 0,
+                'stdout': '{"sessions": [{"key": "agent:main:openclaw-weixin:direct:o9cq801e3kFWHOCswT34SlzTD8Ss@im.wechat", "kind": "direct"}]}',
+                'stderr': ''
+            })()
+            result = srs._get_user_delivery()
+            self.assertEqual(result, ("openclaw-weixin", "o9cq801e3kFWHOCswT34SlzTD8Ss@im.wechat"))
 
     def test_get_user_channel_no_main(self):
         """Test _get_user_channel returns None when no main session."""

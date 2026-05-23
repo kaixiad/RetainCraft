@@ -3,7 +3,7 @@
 # RetainCraft v1.4.0 — 间隔重复学习系统
 #
 # 文件用途：主程序，包含 FSRS-5/SM-2 算法、24 个 CLI 命令、数据持久化
-# 测试覆盖：169 个测试（test_srs.py）
+# 测试覆盖：170 个测试（test_srs.py）
 # 外部依赖：零（仅 Python 标准库）
 #
 # === 文件结构概览 ===
@@ -2271,12 +2271,20 @@ def _cron_exists(name: str) -> bool:
         return False
 
 
-def _get_user_channel() -> str | None:
-    """
-    Detect the user's current channel from OpenClaw sessions.
+def _get_user_delivery() -> tuple[str, str] | None:
+    """Detect the user's delivery target from OpenClaw sessions.
+
+    Parses the session key format: agent:main:{channel}:{kind}:{chat_id}
+    to extract both the channel provider and the user's chat ID.
 
     Returns:
-        Channel provider name (e.g., "telegram", "qqbot"), or None if not detected
+        (channel, chat_id) tuple, e.g., ("openclaw-weixin", "o9cq80...@im.wechat"),
+        or None if not detected.
+
+    Design intent: v1.4.0+ fix — openclaw sessions --json does NOT return an
+    "origin" field. The provider and chat_id are encoded in the session "key".
+    Without both values, cron --announce cannot resolve the delivery target
+    in isolated sessions when multiple channels are configured.
     """
     try:
         result = subprocess.run(
@@ -2288,17 +2296,31 @@ def _get_user_channel() -> str | None:
         if result.returncode != 0:
             return None
         data = json.loads(result.stdout)
-        # openclaw sessions --json returns {"sessions": [...], ...}
         sessions = data.get("sessions", []) if isinstance(data, dict) else data
         for session in sessions:
             if not isinstance(session, dict):
                 continue
-            if session.get("type") == "main":
-                origin = session.get("origin", {})
-                return origin.get("provider")
+            # Session key format: agent:main:{channel}:{kind}:{chat_id}
+            key = session.get("key", "")
+            if not key.startswith("agent:main:"):
+                continue
+            parts = key.split(":")
+            if len(parts) >= 5:
+                channel = parts[2]       # e.g., "openclaw-weixin"
+                chat_id = ":".join(parts[4:])  # e.g., "o9cq80...@im.wechat" (may contain colons)
+                return (channel, chat_id)
         return None
     except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
         return None
+
+
+def _get_user_channel() -> str | None:
+    """Detect the user's channel name from OpenClaw sessions. Returns channel name or None.
+
+    Kept for backward compatibility with cmd_check_reminder and cmd_switch_channel.
+    """
+    delivery = _get_user_delivery()
+    return delivery[0] if delivery else None
 
 
 def _delete_cron(name: str) -> bool:
@@ -2313,12 +2335,13 @@ def _delete_cron(name: str) -> bool:
         return False
 
 
-def _recreate_crons_with_channel(channel: str) -> None:
-    """Delete existing crons and recreate them with the given channel."""
+def _recreate_crons_with_channel(channel: str, chat_id: str = "") -> None:
+    """Delete existing crons and recreate them with the given channel and target."""
     config = load_config()
     contract = config.get("learning_contract", {})
     reminder_time = contract.get("time", "09:00")
     hour = reminder_time.split(":")[0]
+    to_target = f"{channel}:{chat_id}" if chat_id else ""
 
     # Delete existing crons
     _delete_cron("retaincraft-reminder")
@@ -2335,6 +2358,8 @@ def _recreate_crons_with_channel(channel: str) -> None:
         "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} reminder",
         "--announce"
     ]
+    if to_target:
+        cron_args.extend(["--to", to_target])
     try:
         subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -2351,6 +2376,8 @@ def _recreate_crons_with_channel(channel: str) -> None:
         "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} weekly-report",
         "--announce"
     ]
+    if to_target:
+        cron_args.extend(["--to", to_target])
     try:
         subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
     except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -2395,8 +2422,10 @@ def cmd_setup_reminder(args: list[str]) -> None:
 
     hour = reminder_time.split(":")[0]
 
-    # Detect user channel
-    user_channel = _get_user_channel()
+    # Detect user delivery target (channel + chat_id)
+    user_delivery = _get_user_delivery()
+    user_channel = user_delivery[0] if user_delivery else None
+    user_to = f"{user_delivery[0]}:{user_delivery[1]}" if user_delivery else None
 
     # Setup daily reminder
     if _cron_exists("retaincraft-reminder"):
@@ -2411,8 +2440,8 @@ def cmd_setup_reminder(args: list[str]) -> None:
             "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} reminder",
             "--announce"
         ]
-        if user_channel:
-            cron_args.extend(["--channel", user_channel])
+        if user_channel and user_to:
+            cron_args.extend(["--channel", user_channel, "--to", user_to])
 
         try:
             result = subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
@@ -2420,6 +2449,7 @@ def cmd_setup_reminder(args: list[str]) -> None:
                 print(f"[OK] Learning reminder cron created (daily at {reminder_time}).")
                 if user_channel:
                     print(f"     Channel: {user_channel}")
+                    print(f"     Target: {user_to}")
             else:
                 print(f"[WARN] Failed to create reminder cron: {result.stderr}")
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
@@ -2438,8 +2468,8 @@ def cmd_setup_reminder(args: list[str]) -> None:
             "--message", f"执行: python3 {SCRIPTS_DIR / 'srs.py'} weekly-report",
             "--announce"
         ]
-        if user_channel:
-            cron_args.extend(["--channel", user_channel])
+        if user_channel and user_to:
+            cron_args.extend(["--channel", user_channel, "--to", user_to])
 
         try:
             result = subprocess.run(cron_args, capture_output=True, text=True, timeout=30)
@@ -2460,10 +2490,13 @@ def cmd_check_reminder(args: list[str]) -> None:
         config = load_config()
         contract = config.get("learning_contract", {})
         reminder_time = contract.get("time", "09:00")
-        channel = _get_user_channel() or "auto-detect"
+        delivery = _get_user_delivery()
+        channel = delivery[0] if delivery else "auto-detect"
+        to_target = f"{delivery[0]}:{delivery[1]}" if delivery else "not detected"
         print(f"  ✅ Learning reminder: ENABLED")
         print(f"     Time: {reminder_time}")
         print(f"     Channel: {channel}")
+        print(f"     Target: {to_target}")
     else:
         print(f"  ⚠️  Learning reminder: NOT ENABLED")
         print(f"     Run 'srs.py setup-reminder' to enable")
@@ -2526,7 +2559,9 @@ def cmd_switch_channel(args: list[str]) -> None:
 
     # Recreate cron jobs with the new channel
     print(f"\n  Switching to: {selected['type']} - {selected['target']}")
-    _recreate_crons_with_channel(selected["type"])
+    delivery = _get_user_delivery()
+    chat_id = delivery[1] if delivery else ""
+    _recreate_crons_with_channel(selected["type"], chat_id)
     print(f"  [OK] Channel switched to {selected['type']}.")
 
 
