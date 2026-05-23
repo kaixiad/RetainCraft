@@ -2271,11 +2271,15 @@ def _cron_exists(name: str) -> bool:
         return False
 
 
-def _get_user_delivery() -> tuple[str, str] | None:
+def _get_user_delivery(channel_filter: str = "") -> tuple[str, str] | None:
     """Detect the user's delivery target from OpenClaw sessions.
 
     Parses the session key format: agent:main:{channel}:{kind}:{chat_id}
     to extract both the channel provider and the user's chat ID.
+
+    Args:
+        channel_filter: If provided, only match sessions from this channel.
+                        E.g., "openclaw-weixin" to find the WeChat session.
 
     Returns:
         (channel, chat_id) tuple, e.g., ("openclaw-weixin", "o9cq80...@im.wechat"),
@@ -2308,6 +2312,9 @@ def _get_user_delivery() -> tuple[str, str] | None:
             if len(parts) >= 5:
                 channel = parts[2]       # e.g., "openclaw-weixin"
                 chat_id = ":".join(parts[4:])  # e.g., "o9cq80...@im.wechat" (may contain colons)
+                # If filter specified, only return matching channel
+                if channel_filter and channel != channel_filter:
+                    continue
                 return (channel, chat_id)
         return None
     except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
@@ -2422,10 +2429,27 @@ def cmd_setup_reminder(args: list[str]) -> None:
 
     hour = reminder_time.split(":")[0]
 
-    # Detect user delivery target (channel + chat_id)
-    user_delivery = _get_user_delivery()
-    user_channel = user_delivery[0] if user_delivery else None
-    user_to = f"{user_delivery[0]}:{user_delivery[1]}" if user_delivery else None
+    # Resolve delivery target with priority:
+    #   1. config.active_channel (user-explicit) → find that channel's session
+    #   2. Current session channel + chat_id (auto-detect)
+    #   3. No --to (legacy fallback)
+    active_channel = config.get("active_channel", "")
+    if active_channel:
+        # User explicitly chose a channel — find that channel's session
+        channel_delivery = _get_user_delivery(channel_filter=active_channel)
+        if channel_delivery:
+            user_channel = channel_delivery[0]
+            user_to = f"{channel_delivery[0]}:{channel_delivery[1]}"
+        else:
+            # Active channel set but no session found for it — fall back to current
+            session_delivery = _get_user_delivery()
+            user_channel = session_delivery[0] if session_delivery else None
+            user_to = f"{session_delivery[0]}:{session_delivery[1]}" if session_delivery else None
+    else:
+        # No explicit channel — auto-detect from current session
+        session_delivery = _get_user_delivery()
+        user_channel = session_delivery[0] if session_delivery else None
+        user_to = f"{session_delivery[0]}:{session_delivery[1]}" if session_delivery else None
 
     # Setup daily reminder
     if _cron_exists("retaincraft-reminder"):
