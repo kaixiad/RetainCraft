@@ -198,13 +198,10 @@ Evidence-based AI-assisted interactive learning protocol
 **Reminder creation (提醒创建)**:
 After user confirms the learning contract, AI MUST create a timed reminder:
 1. Extract learning time from the contract (e.g., "每天 20:00")
-2. Create a reminder using whatever mechanism your platform provides:
-   - OpenClaw → `openclaw cron add`
-   - WorkBuddy → natural language automation
-   - Claude Code → `/schedule` command
-   - Other → tell user to set up manually
-3. Tell user: "提醒已设置，每天 XX:XX 会提醒你学习"
-4. If creation fails → tell user the fallback plan
+2. **OpenClaw**: Run `python3 scripts/srs.py setup-reminder` (auto-detects channel + delivery target)
+3. **Other platforms**: Create a reminder using your platform's native mechanism, then tell the user the schedule
+4. Tell user: "提醒已设置，每天 XX:XX 会提醒你学习"
+5. If creation fails → tell user the fallback plan
 
 **Reminder check at session start (会话开始时提醒检查)**:
 Every time a learning session starts, check if the user has a timed reminder.
