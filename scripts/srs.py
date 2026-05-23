@@ -2582,8 +2582,9 @@ def cmd_switch_channel(args: list[str]) -> None:
     save_config(config)
 
     # Recreate cron jobs with the new channel
+    # Use channel_filter to get the TARGET channel's chat_id, not the current session's
     print(f"\n  Switching to: {selected['type']} - {selected['target']}")
-    delivery = _get_user_delivery()
+    delivery = _get_user_delivery(channel_filter=selected["type"])
     chat_id = delivery[1] if delivery else ""
     _recreate_crons_with_channel(selected["type"], chat_id)
     print(f"  [OK] Channel switched to {selected['type']}.")
