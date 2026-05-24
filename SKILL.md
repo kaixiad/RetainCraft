@@ -67,7 +67,11 @@ Evidence-based AI-assisted interactive learning protocol
 
 **📦 Source Code (源码)**: [https://github.com/kaixiad/RetainCraft](https://github.com/kaixiad/RetainCraft)
 
-> **RetainCraft** by [kaixiad](https://github.com/kaixiad) — 169 unit tests, 14 academic citations, zero dependencies.
+**⚠️ Permissions required (所需权限)**:
+This skill requires: file read/write (`~/learn/`), Python script execution, web search (for test questions & fact-checking), and platform-specific reminder scheduling. All data stored locally. No external API calls.
+本技能需要：文件读写（`~/learn/`）、Python 脚本执行、网络搜索（出题和事实核查）、平台提醒调度。所有数据本地存储，无外部 API 调用。
+
+> **RetainCraft** by [kaixiad](https://github.com/kaixiad) — 170 unit tests, 14 academic citations, zero dependencies.
 > If you find this useful, a ⭐ on GitHub would mean a lot.
 **📖 Detailed workflow (详细流程)**: [references/full-workflow.md](references/full-workflow.md)
 
